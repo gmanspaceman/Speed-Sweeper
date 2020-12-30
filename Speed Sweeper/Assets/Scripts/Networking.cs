@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
 using System.Net.Sockets;
 using System.Threading;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Networking : MonoBehaviour
 {
@@ -13,13 +13,15 @@ public class Networking : MonoBehaviour
     public static TcpClient _tcpClient;
     public static NetworkStream _stream;
 
-    public static event Action OnWaitForGrid;
-    public static event Action OnWaitForPlayer2;
+    public static event Action OnWaitTurn;
+    public static event Action OnYourTurn;
+    public static event Action<int> OnJoinedGame;
     public static event Action<int,int> OnTileClicked;
     public static event Action<string> OnGridRecieve;
+    public static event Action<Dictionary<int, int>> OnGameList;
 
     // Start is called before the first frame update
-    void Start()
+    void OpenServerConnection()
     {
         _tcpClient = new TcpClient(ipAddr, port);
         _stream = _tcpClient.GetStream();
@@ -76,19 +78,38 @@ public class Networking : MonoBehaviour
             string msgKey = parseMsg[0];
 
             string clientResponse = "";
+            int gameId = -1;
 
             switch (msgKey)
             {
-                case "WAIT_FOR_GRID":
-                    if (OnWaitForGrid != null)
-                        OnWaitForGrid();
+                //case "MADE_GAME":
+                //    gameId = int.Parse(parseMsg[1]);
+                //    if (OnMadeGame != null)
+                //        OnMadeGame(gameId);
+
+                //    break;
+                case "JOINED_GAME":
+                    gameId = int.Parse(parseMsg[1]);
+                    if (OnJoinedGame != null)
+                        OnJoinedGame(gameId);
 
                     break;
-                case "WAIT_FOR_PLAYER2":
-                    if (OnWaitForPlayer2 != null)
-                        OnWaitForPlayer2();
+                case "GAME_LIST":
+                    Dictionary<int, int> gameList = new Dictionary<int, int>();
+
+                    for (int ii = 1; ii < parseMsg.Length; ii = ii +2 )
+                    {
+                        int gameNum = int.Parse(parseMsg[ii]);
+                        int numberOfPlayers = int.Parse(parseMsg[ii+1]);
+
+                        gameList.Add(gameNum, numberOfPlayers);
+                    }
+
+                    if (OnGameList != null)
+                        OnGameList(gameList);
 
                     break;
+
                 case "TILE_CLICKED":
                     int c = int.Parse(parseMsg[1]);
                     int r = int.Parse(parseMsg[2]);
@@ -96,9 +117,19 @@ public class Networking : MonoBehaviour
                         OnTileClicked(c,r);
 
                     break;
-                case "BOMB_GRID":
+                case "START_GAME":
                     if (OnGridRecieve != null)
                         OnGridRecieve(serverData);
+
+                    break;
+                case "WAIT_TURN":
+                    if (OnWaitTurn != null)
+                        OnWaitTurn();
+
+                    break;
+                case "YOUR_TURN":
+                    if (OnYourTurn != null)
+                        OnYourTurn();
 
                     break;
                 default:

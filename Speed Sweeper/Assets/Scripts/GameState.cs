@@ -10,7 +10,8 @@ using UnityEngine;
 [Serializable]
 public class GameState : MonoBehaviour
 {
-    public enum GamePhase { PreGame, Playing, Paused, Lose, Win };
+    public enum GamePhase { PreGame, Playing, Paused, Lose, Win, NetworkConfig };
+    public enum GameType { Solo, Multiplayer };
     public int totalTiles { get; set; }
     public int totalBombs { get; set; }
     public int totalVisible { get; set; }
@@ -22,7 +23,10 @@ public class GameState : MonoBehaviour
     public int bombsRemaining { get; set; }
     public int round { get; set; }
     public float playTime { get; set; }
+    public float gameId { get; set; }
+    public bool myTurn { get; set; }
     public GamePhase gamePhase { get; set; }
+    public GameType gameType { get; set; }
     public Tile[,] board { get; set; }
     public Vector2Int[] boardCoords { get; set; }
 
@@ -61,7 +65,10 @@ public class GameState : MonoBehaviour
         bombsclicked = 0;
         round = 0;
         playTime = 0;
-        gamePhase = GamePhase.PreGame;
+        gamePhase = GamePhase.NetworkConfig;
+        gameType = GameType.Multiplayer;
+        myTurn = (gameType == GameType.Multiplayer) ? false : true;
+        gameId = -1;
 
         numMines = _numMines;
         //newGame = true;

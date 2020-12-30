@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,10 +42,12 @@ public class BoardGenerator : MonoBehaviour
     {
         gameUI = FindObjectOfType<GameUI>();
 
-        Networking.OnWaitForGrid += WaitBombGrid;
-        Networking.OnWaitForPlayer2 += WaitForPlayerToJoin;
+        Networking.OnJoinedGame += JoinedGame;
         Networking.OnGridRecieve += GridRecieve;
         Networking.OnTileClicked += TileClicked;
+        Networking.OnGameList += GameList;
+        Networking.OnWaitTurn += WaitTurn;
+        Networking.OnYourTurn += YourTurn;
 
         //if single player just call init
         initalizeGameState();
@@ -53,35 +56,41 @@ public class BoardGenerator : MonoBehaviour
 
     }
 
-    public void StartServerGame()
+    public void MakeServerGame()
     {
         //Send this to a server
         string msgKey = "MAKE_GAME"; //figure out extra tokens
 
         Networking.SendToServer(msgKey);
-
-        //Wait fora  response that is like
-        //okay, send me a bomb grid
-        //WAITING_FOR_BOMB_GRID
-
-        //going to cheat all this and just send the bomb grid
-
+        g.myTurn = true;
     }
-    public void WaitBombGrid()
+    public void JoinedGame(int gameId)
+    {
+        g.gameId = gameId;
+    }
+    public void GameList(Dictionary<int, int> gameList)
+    {
+       //Display the game list so user can choose what to join
+    }
+    public void JoinGame(int gameId=0)
     {
         //Send this to a server
-        
-        //this will unlock clicking
+        string msgKey = "JOIN_GAME"; 
+        //joining mid game will need more work
+        //need to get copy of grid from host to populate
 
-        //Wait fora  response that is like
-        //okay, lets wait for ap layer to join
-        //aka wait for a message to start game
-        //this will make a wiaitf for player to connect disappear
-        //WAITING_FOR_PLAYER2
+        string msg = string.Join(",", msgKey, gameId);
+
+        Networking.SendToServer(msg);
+
+        g.myTurn = false;
     }
-    public void WaitForPlayerToJoin()
+    public void StartServerGame()
     {
+        string msgKey = "START_GAME";   //build the board and then send this
+        Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
 
+        g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
     }
     public void GridRecieve(string s)
     {
@@ -89,32 +98,44 @@ public class BoardGenerator : MonoBehaviour
         //populate your board too
         PopulateBombs(g, s);
     }
+    public void ClickTile(Tile t)
+    {
+        string msgKey = "TILE_CLICKED";
+
+        string msg = string.Join(",", msgKey, t.c_position, t.r_position);
+        Networking.SendToServer(msg);
+
+        g.myTurn = false; // only allow 1 move
+    }
     public void TileClicked(int c, int r)
     {
         TileWasClicked(g.board[c,r]);
     }
-    public void JoinServerGame()
+    public void WaitTurn()
     {
-        //Send this to a server
-        string msgKey = "JOIN_GAME";
-        Networking.SendToServer(msgKey);
-        //need to include a game id at some point
-        //either from a pre populated list
-        //or a querried list
-
-        //GAME_JOINED
-        //this will have some paylaod and the bombs grid
-
-        //after game is joined server will wait 3 seconds then send
-        //START_GAME 
-        //this could also be implied with a thing like
-        //PLAYER1_TURN
-        //this would also inform ther other player to wait but to start the time
-
-        //TILE_CLICKED
-        //This will freeze both games in terms of turns and then decide whos turn it is
-
+        g.myTurn = false;
     }
+    public void YourTurn()
+    {
+        g.myTurn = true;
+    }
+    public void EndGame()
+    {
+        string msgKey = "END_GAME";
+
+        string msg = string.Join(",", msgKey, g.gameId);
+        Networking.SendToServer(msg);
+    }
+    public void DropGame()
+    {
+        string msgKey = "DROP_GAME";
+
+        string msg = string.Join(",", msgKey, g.gameId);
+        Networking.SendToServer(msg);
+
+        g.gameId = -1;
+    }
+
     public void initalizeGameState()
     {
         numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
@@ -122,8 +143,6 @@ public class BoardGenerator : MonoBehaviour
         mouse2Time = 0f;
 
         g = new GameState(Columns, Rows, numberOfMines);
-
-        
 
         buildGameBoard(g); // builds game with no bombs nothing showing
                            //gamestate has the right size but no bombs
@@ -140,33 +159,93 @@ public class BoardGenerator : MonoBehaviour
             StartCoroutine(AnimateRippleRight(g));
     }
 
+
+
     // Update is called once per frame
     void Update()
     {
-        //debug code to test getting from the server
-        //if (g.gamePhase == GameState.GamePhase.PreGame)
-        //{
-        //    Networking.SendToServer("GET_BOMBS_GRID,0");
-        //    new WaitForSeconds(1);
-        //    //while (true)
-        //    //{
-        //    string s = "";
-        //        if (Networking.ReadFromToServer(ref s))
-        //        {
-        //            if (s.Contains("BOMBS_GRID"))
-        //            {
-        //                PopulateBombs(g, s);
-                        
-        //            }
-        //        }
-        //    //}
-        //    return;
-        //}
-
-
         if (animationActive || explosion != null) //dont allow clicking to move anythign right now
             return;
+        
+        UpdateUI();
 
+        if (g.gamePhase == GameState.GamePhase.NetworkConfig)
+        {
+            if(g.gameType == GameState.GameType.Solo)
+            {
+                g.gamePhase = GameState.GamePhase.PreGame;
+                g.myTurn = true; //i think this is alreayd true
+            }
+
+            //else do server stuff
+            //waiting to see player hosts or joins
+ 
+        }
+        if (!g.myTurn)
+            return;
+
+        //User Input
+        if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
+        {
+            Vector3 v = Input.mousePosition;
+            Tile t = GetTileClicked(v);
+            string msgKey;
+
+            if (g.gamePhase == GameState.GamePhase.PreGame)
+            {
+                if (Input.GetMouseButtonUp(0))
+                {
+                    g.playTime = 0;
+
+                    //buildGameBoard(g); //building new game
+                    PopulateBombs(g, t);
+
+                }
+            }
+            else if (g.gamePhase == GameState.GamePhase.Win || g.gamePhase == GameState.GamePhase.Lose)
+            {
+                if (Input.GetMouseButtonUp(0))
+                {
+                    gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+                    initalizeGameState();
+                    return;
+                }
+            }
+            else if (g.gamePhase == GameState.GamePhase.Playing)
+            {
+                AniateClickDownHover();
+
+                mouse1Time = (Input.GetMouseButtonUp(0)) ? Time.time : mouse1Time;
+                mouse2Time = (Input.GetMouseButtonUp(1)) ? Time.time : mouse2Time;
+
+                if (Input.GetMouseButtonUp(0) && Input.GetMouseButton(1))
+                {
+                    mouse1Time = Time.time;
+                }
+                else if (Input.GetMouseButtonUp(1) && Input.GetMouseButton(0))
+                {
+                    mouse2Time = Time.time;
+                }
+                else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f)
+                {
+                    TileWasRightAndLeftClicked(t);
+                }
+                else if (Input.GetMouseButtonUp(0))
+                {
+                    TileWasClicked(t);
+                    msgKey = "TILE_CLICKED";   //build the board and then send this
+                    string body = "," + t.c_position.ToString() + "," + t.r_position.ToString();
+                    Networking.SendToServer(g.SerializeInitBoardForServer(msgKey + body));
+                }
+                else if (Input.GetMouseButtonUp(1))
+                {
+                    TileWasRightClicked(t);
+                }
+            }
+        }
+    }
+    public void UpdateUI()
+    {
         gameUI.ShowHideGameEnd(g.gamePhase);
 
         if (g.gamePhase == GameState.GamePhase.Playing)
@@ -174,16 +253,16 @@ public class BoardGenerator : MonoBehaviour
             g.playTime += Time.deltaTime;
             gameUI.UpdateScore(g.playTime);
         }
-        
-
         gameUI.UpdateMines(g.numMines - g.totalFlagged);
 
-
-        if (g.gamePhase != GameState.GamePhase.Win &&
-            g.gamePhase != GameState.GamePhase.Lose)
+        gameUI.WhosTurn(g.myTurn);
+    }
+    public void AniateClickDownHover()
+    {
+        if (Input.GetMouseButton(0))
         {
-
-            if (Input.GetMouseButton(0))
+            if (g.gamePhase != GameState.GamePhase.Win &&
+            g.gamePhase != GameState.GamePhase.Lose)
             {
                 Vector3 v = Input.mousePosition;
                 Tile t = GetTileClicked(v);
@@ -221,17 +300,8 @@ public class BoardGenerator : MonoBehaviour
                 }
             }
         }
-
-
-
-        //something was clicked
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
         {
-            Vector3 v = Input.mousePosition;
-            Tile t = GetTileClicked(v);
-
-            Networking.SendToServer("Tile Col: " + t.c_position + " Row: " + t.r_position + " was Clicked");
-
             //This undoes the mous click hover
             foreach (Vector2Int rc in g.boardCoords)
             {
@@ -239,81 +309,10 @@ public class BoardGenerator : MonoBehaviour
                 {
                     g.board[rc.x, rc.y].makeUnClicked();
                 }
-                
-            }
 
-
-            if (Input.GetMouseButtonUp(0))
-            {
-                mouse1Time = Time.time;
-            }
-
-            if (Input.GetMouseButtonUp(1))
-            {
-                mouse2Time = Time.time;
-            }
-
-
-
-            if (Input.GetMouseButtonUp(0) && Input.GetMouseButton(1))
-            {
-                mouse1Time = Time.time;
-            }
-            else if (Input.GetMouseButtonUp(1) && Input.GetMouseButton(0))
-            {
-                mouse2Time = Time.time; 
-            }
-            else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f)
-            {
-                TileWasRightAndLeftClicked(t);
-            }
-            else if (Input.GetMouseButtonUp(0))
-            {
-                if (g.gamePhase == GameState.GamePhase.Win || g.gamePhase == GameState.GamePhase.Lose)
-                {
-                    gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
-                    initalizeGameState();
-                    return;
-                }
-
-                if (!t.isBomb && !t.isClicked)
-                {
-                    AudioManager.instance.PlayClickAt(t.T.position);
-                }
-
-                switch (g.gamePhase)
-                {
-                    case GameState.GamePhase.PreGame:
-                        g.playTime = 0;
-                        
-                        //buildGameBoard(g); //building new game
-                        PopulateBombs(g, t);
-
-                        string msgKey = "BOMBS_GRID";   //build the board and then send this
-                        Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
-
-
-                        break;
-                    case GameState.GamePhase.Playing:
-                        TileWasClicked(t);
-                        msgKey = "TILE_CLICKED";   //build the board and then send this
-                        string body = "," + t.c_position.ToString()+ "," + t.r_position.ToString();
-                        Networking.SendToServer(g.SerializeInitBoardForServer(msgKey + body));
-
-                        break;
-                }
-                
-            }
-            else if (Input.GetMouseButtonUp(1))
-            {
-                if (g.gamePhase == GameState.GamePhase.Playing)
-                {                  
-                    TileWasRightClicked(t);
-                }
             }
         }
     }
-
     public Tile GetTileClicked(Vector3 v)
     {
         Ray ray = Camera.main.ScreenPointToRay(v);
@@ -411,6 +410,11 @@ public class BoardGenerator : MonoBehaviour
         //for each click send it to the server
         //either the server verifies and you wait for response
         //or just clicks in and it sends the click to the other user
+
+        if (!t.isBomb && !t.isClicked)
+        {
+            AudioManager.instance.PlayClickAt(t.T.position);
+        }
 
         t.makeClicked();
         t.makeVisible();

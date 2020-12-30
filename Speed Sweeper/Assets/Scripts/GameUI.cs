@@ -10,6 +10,9 @@ public class GameUI : MonoBehaviour
     public Text score;
     public Text mines;
 
+    public GameObject YourTurn;
+    public GameObject TheirTurn;
+
     public Slider volSlider;
 
     public GameObject gameLose;
@@ -22,9 +25,11 @@ public class GameUI : MonoBehaviour
     {
         UpdateScore(0f);
         UpdateMines(99);
-
-
-
+    }
+    public void WhosTurn(bool myTurn)
+    {
+         YourTurn.SetActive(myTurn);
+         TheirTurn.SetActive(!myTurn);
     }
     public void toggleMenu()
     {
