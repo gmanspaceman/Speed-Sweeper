@@ -72,7 +72,7 @@ public class BoardGenerator : MonoBehaviour
     {
        //Display the game list so user can choose what to join
     }
-    public void JoinGame(int gameId=0)
+    public void JoinGame(int gameId)
     {
         //Send this to a server
         string msgKey = "JOIN_GAME"; 
@@ -199,6 +199,7 @@ public class BoardGenerator : MonoBehaviour
 
                     //buildGameBoard(g); //building new game
                     PopulateBombs(g, t);
+                    StartServerGame();
 
                 }
             }
@@ -233,9 +234,7 @@ public class BoardGenerator : MonoBehaviour
                 else if (Input.GetMouseButtonUp(0))
                 {
                     TileWasClicked(t);
-                    msgKey = "TILE_CLICKED";   //build the board and then send this
-                    string body = "," + t.c_position.ToString() + "," + t.r_position.ToString();
-                    Networking.SendToServer(g.SerializeInitBoardForServer(msgKey + body));
+                    ClickTile(t);
                 }
                 else if (Input.GetMouseButtonUp(1))
                 {
