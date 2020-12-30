@@ -58,6 +58,8 @@ public class BoardGenerator : MonoBehaviour
 
     public void MakeServerGame()
     {
+        //Networking.OpenServerConnection();
+
         //Send this to a server
         string msgKey = "MAKE_GAME"; //figure out extra tokens
 

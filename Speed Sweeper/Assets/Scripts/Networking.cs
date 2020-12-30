@@ -21,10 +21,18 @@ public class Networking : MonoBehaviour
     public static event Action<Dictionary<int, int>> OnGameList;
 
     // Start is called before the first frame update
+    private void Start()
+    {
+        OpenServerConnection();
+    }
     void OpenServerConnection()
     {
         _tcpClient = new TcpClient(ipAddr, port);
         _stream = _tcpClient.GetStream();
+
+        //strat a thread to listen
+        Thread t = new Thread(ReadFromServerThread);
+        t.Start();  //this will end up rejecting if too many ppl
 
         StartCoroutine("PingServer");
     }
@@ -59,7 +67,7 @@ public class Networking : MonoBehaviour
             Console.WriteLine("Server must have closed the connection!!!!");
         }
     }
-    public static bool ReadFromServerThread()
+    public static void ReadFromServerThread()
     {
         Byte[] buffer = new Byte[1024];
         int inputBuffer;
@@ -67,7 +75,10 @@ public class Networking : MonoBehaviour
         while (true)
         {
             if (!_stream.DataAvailable)
+            {
+                Thread.Sleep(125);
                 continue;
+            }
             inputBuffer = _stream.Read(buffer, 0, buffer.Length);
             
             string serverData = System.Text.Encoding.ASCII.GetString(buffer, 0, inputBuffer);
