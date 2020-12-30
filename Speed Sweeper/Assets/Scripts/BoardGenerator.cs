@@ -1,8 +1,5 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 
@@ -44,18 +41,79 @@ public class BoardGenerator : MonoBehaviour
     {
         gameUI = FindObjectOfType<GameUI>();
 
-        //Networking network = new Networking();
-        //network.StartClient();
+        Networking.OnWaitForGrid += WaitBombGrid;
+        Networking.OnWaitForPlayer2 += WaitForPlayerToJoin;
+        Networking.OnGridRecieve += GridRecieve;
+        Networking.OnTileClicked += TileClicked;
 
-        Networking.SendToServer("Hey I want to play please");
-
-        string rsp = string.Empty;
-        if(Networking.ReadFromToServer(ref rsp))
-        {
-            print("Got msg from server: " + rsp);
-        }
-
+        //if single player just call init
         initalizeGameState();
+
+        //else
+
+    }
+
+    public void StartServerGame()
+    {
+        //Send this to a server
+        string msgKey = "MAKE_GAME"; //figure out extra tokens
+
+        Networking.SendToServer(msgKey);
+
+        //Wait fora  response that is like
+        //okay, send me a bomb grid
+        //WAITING_FOR_BOMB_GRID
+
+        //going to cheat all this and just send the bomb grid
+
+    }
+    public void WaitBombGrid()
+    {
+        //Send this to a server
+        
+        //this will unlock clicking
+
+        //Wait fora  response that is like
+        //okay, lets wait for ap layer to join
+        //aka wait for a message to start game
+        //this will make a wiaitf for player to connect disappear
+        //WAITING_FOR_PLAYER2
+    }
+    public void WaitForPlayerToJoin()
+    {
+
+    }
+    public void GridRecieve(string s)
+    {
+        //other person started the game
+        //populate your board too
+        PopulateBombs(g, s);
+    }
+    public void TileClicked(int c, int r)
+    {
+        TileWasClicked(g.board[c,r]);
+    }
+    public void JoinServerGame()
+    {
+        //Send this to a server
+        string msgKey = "JOIN_GAME";
+        Networking.SendToServer(msgKey);
+        //need to include a game id at some point
+        //either from a pre populated list
+        //or a querried list
+
+        //GAME_JOINED
+        //this will have some paylaod and the bombs grid
+
+        //after game is joined server will wait 3 seconds then send
+        //START_GAME 
+        //this could also be implied with a thing like
+        //PLAYER1_TURN
+        //this would also inform ther other player to wait but to start the time
+
+        //TILE_CLICKED
+        //This will freeze both games in terms of turns and then decide whos turn it is
+
     }
     public void initalizeGameState()
     {
@@ -78,11 +136,6 @@ public class BoardGenerator : MonoBehaviour
         //intersting, local player update the game state and sends copy to server
         //server sends it to the other player
 
-        //g = g.DeSerializeGameState(g.SerializeGameState(g));
-
-        Networking.SendToServer(g.SerializeInitBoardForServer());
-
-
         if (!animationActive)
             StartCoroutine(AnimateRippleRight(g));
     }
@@ -91,25 +144,25 @@ public class BoardGenerator : MonoBehaviour
     void Update()
     {
         //debug code to test getting from the server
-        if (g.gamePhase == GameState.GamePhase.PreGame)
-        {
-
-            Networking.SendToServer("GET_BOMBS_GRID,0");
-            new WaitForSeconds(1);
-            //while (true)
-            //{
-            string s = "";
-                if (Networking.ReadFromToServer(ref s))
-                {
-                    if (s.Contains("BOMBS_GRID"))
-                    {
-                        PopulateBombs(g, s);
+        //if (g.gamePhase == GameState.GamePhase.PreGame)
+        //{
+        //    Networking.SendToServer("GET_BOMBS_GRID,0");
+        //    new WaitForSeconds(1);
+        //    //while (true)
+        //    //{
+        //    string s = "";
+        //        if (Networking.ReadFromToServer(ref s))
+        //        {
+        //            if (s.Contains("BOMBS_GRID"))
+        //            {
+        //                PopulateBombs(g, s);
                         
-                    }
-                }
-            //}
-            return;
-        }
+        //            }
+        //        }
+        //    //}
+        //    return;
+        //}
+
 
         if (animationActive || explosion != null) //dont allow clicking to move anythign right now
             return;
@@ -236,11 +289,16 @@ public class BoardGenerator : MonoBehaviour
                         //buildGameBoard(g); //building new game
                         PopulateBombs(g, t);
 
+                        string msgKey = "BOMBS_GRID";   //build the board and then send this
+                        Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
 
 
                         break;
                     case GameState.GamePhase.Playing:
                         TileWasClicked(t);
+                        msgKey = "TILE_CLICKED";   //build the board and then send this
+                        string body = "," + t.c_position.ToString()+ "," + t.r_position.ToString();
+                        Networking.SendToServer(g.SerializeInitBoardForServer(msgKey + body));
 
                         break;
                 }

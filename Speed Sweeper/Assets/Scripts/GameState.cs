@@ -103,9 +103,9 @@ public class GameState : MonoBehaviour
         }
     }
 
-    public string SerializeInitBoardForServer()
+    public string SerializeInitBoardForServer(string msgKey)
     {
-        string bomb = "BOMBS_GRID";
+        string bomb = msgKey;
         string co = "0", ro = "0";
         for (int c = 0; c < board.GetLength(0); c++)
         {

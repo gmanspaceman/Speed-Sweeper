@@ -1,12 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Diagnostics;
-using System.Net;
+﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System;
+using System.Collections;
 
 public class Networking : MonoBehaviour
 {
@@ -16,12 +13,18 @@ public class Networking : MonoBehaviour
     public static TcpClient _tcpClient;
     public static NetworkStream _stream;
 
+    public static event Action OnWaitForGrid;
+    public static event Action OnWaitForPlayer2;
+    public static event Action<int,int> OnTileClicked;
+    public static event Action<string> OnGridRecieve;
+
     // Start is called before the first frame update
     void Start()
     {
         _tcpClient = new TcpClient(ipAddr, port);
         _stream = _tcpClient.GetStream();
 
+        StartCoroutine("PingServer");
     }
 
     // Update is called once per frame
@@ -29,7 +32,14 @@ public class Networking : MonoBehaviour
     {
         
     }
-
+    IEnumerator PingServer()
+    {
+        while (true)
+        {
+            Networking.SendToServer("PING");
+            yield return new WaitForSeconds(5);
+        }
+    }
     public static void SendToServer(string msg)
     {
         try
@@ -45,6 +55,60 @@ public class Networking : MonoBehaviour
         catch
         {
             Console.WriteLine("Server must have closed the connection!!!!");
+        }
+    }
+    public static bool ReadFromServerThread()
+    {
+        Byte[] buffer = new Byte[1024];
+        int inputBuffer;
+
+        while (true)
+        {
+            if (!_stream.DataAvailable)
+                continue;
+            inputBuffer = _stream.Read(buffer, 0, buffer.Length);
+            
+            string serverData = System.Text.Encoding.ASCII.GetString(buffer, 0, inputBuffer);
+            //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
+            print("Received: " + serverData);
+
+            string[] parseMsg = serverData.Split(',');
+            string msgKey = parseMsg[0];
+
+            string clientResponse = "";
+
+            switch (msgKey)
+            {
+                case "WAIT_FOR_GRID":
+                    if (OnWaitForGrid != null)
+                        OnWaitForGrid();
+
+                    break;
+                case "WAIT_FOR_PLAYER2":
+                    if (OnWaitForPlayer2 != null)
+                        OnWaitForPlayer2();
+
+                    break;
+                case "TILE_CLICKED":
+                    int c = int.Parse(parseMsg[1]);
+                    int r = int.Parse(parseMsg[2]);
+                    if (OnTileClicked != null)
+                        OnTileClicked(c,r);
+
+                    break;
+                case "BOMB_GRID":
+                    if (OnGridRecieve != null)
+                        OnGridRecieve(serverData);
+
+                    break;
+                default:
+
+                    //clientResponse = "Hey Device! Your Client ID is: " + clientID.ToString() + "\n";
+
+                    break;
+
+            }
+
         }
     }
 
