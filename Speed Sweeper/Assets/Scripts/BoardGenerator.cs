@@ -72,7 +72,17 @@ public class BoardGenerator : MonoBehaviour
     }
     public void GameList(Dictionary<int, int> gameList)
     {
-       //Display the game list so user can choose what to join
+        //Display the game list so user can choose what to join
+        foreach (KeyValuePair<int, int> k in gameList)
+            print("Game " + k.Key + " has " + k.Value + " players.");
+    }
+    public void GetGameList()
+    {
+        string msgKey = "GET_GAMES";
+        //joining mid game will need more work
+        //need to get copy of grid from host to populate
+
+        Networking.SendToServer(msgKey);
     }
     public void JoinGame(int gameId)
     {
@@ -92,7 +102,7 @@ public class BoardGenerator : MonoBehaviour
         string msgKey = "START_GAME";   //build the board and then send this
         Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
 
-        g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
+        //g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
     }
     public void GridRecieve(string s)
     {
@@ -127,6 +137,8 @@ public class BoardGenerator : MonoBehaviour
 
         string msg = string.Join(",", msgKey, g.gameId);
         Networking.SendToServer(msg);
+
+        g.gameId = -1;
     }
     public void DropGame()
     {
@@ -186,7 +198,19 @@ public class BoardGenerator : MonoBehaviour
         if (!g.myTurn)
             return;
 
-        //User Input
+        //repond to gamestatechagne here for now
+        if (g.gamePhase == GameState.GamePhase.Win || 
+            g.gamePhase == GameState.GamePhase.Lose)
+        { 
+            if (g.gameType == GameState.GameType.Multiplayer &&
+                g.gameId != -1)
+            {
+                EndGame();
+            }
+        }
+
+
+            //User Input
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
         {
             Vector3 v = Input.mousePosition;
