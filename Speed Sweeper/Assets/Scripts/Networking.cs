@@ -9,6 +9,8 @@ public class Networking : MonoBehaviour
 {
     public const string ipAddr = "34.94.134.79";
     public const int port = 11111;
+    public const string eom = "<EOM>";
+
     public Client client;
     public static TcpClient _tcpClient;
     public static NetworkStream _stream;
@@ -56,12 +58,13 @@ public class Networking : MonoBehaviour
     {
         try
         {
+            msg += eom; //append EOM marker
 
-                // Translate the Message into ASCII.
-                byte[] data = System.Text.Encoding.ASCII.GetBytes(msg);
-                // Send the message to the connected TcpServer. 
-                _stream.Write(data, 0, data.Length);
-                print("Sent: " + msg);
+            // Translate the Message into ASCII.
+            byte[] data = System.Text.Encoding.ASCII.GetBytes(msg);
+            // Send the message to the connected TcpServer. 
+            _stream.Write(data, 0, data.Length);
+            print("Sent: " + msg);
 
         }
         catch
@@ -73,6 +76,9 @@ public class Networking : MonoBehaviour
     {
         Byte[] buffer = new Byte[1024];
         int inputBuffer;
+        string serverData = string.Empty;
+        string carryData = string.Empty;
+        
 
         while (true)
         {
@@ -80,12 +86,31 @@ public class Networking : MonoBehaviour
 
             if (!_stream.DataAvailable)
             {
-                //Thread.Sleep(125);
                 continue;
             }
+
+            serverData = carryData;
+            carryData = string.Empty;
+
             inputBuffer = _stream.Read(buffer, 0, buffer.Length);
-            
-            string serverData = System.Text.Encoding.ASCII.GetString(buffer, 0, inputBuffer);
+            serverData += System.Text.Encoding.ASCII.GetString(buffer, 0, inputBuffer);
+
+            //Carry over
+            if (serverData.Contains(eom)) //Find the <EOM> tag
+            {
+                if (!serverData.EndsWith(eom)) //split and store the rest
+                {   string[] splitInput = serverData.Split(new string[] { eom }, StringSplitOptions.None);
+                    serverData += splitInput[0];
+                    carryData = splitInput[1];
+                }
+            }
+            else //patial packet keep the string and append the next read
+            {
+                carryData = serverData;
+                continue;
+            }
+            serverData.Replace(eom, "");
+
             //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
             print("Received: " + serverData);
 
@@ -159,7 +184,6 @@ public class Networking : MonoBehaviour
                     break;
 
             }
-
         }
     }
 
