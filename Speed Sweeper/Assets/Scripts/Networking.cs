@@ -109,7 +109,7 @@ public class Networking : MonoBehaviour
                 carryData = serverData;
                 continue;
             }
-            serverData.Replace(eom, "");
+            serverData = serverData.Replace(eom, "");
 
             //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
             print("Received: " + serverData);
