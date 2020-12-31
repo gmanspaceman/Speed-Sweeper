@@ -130,7 +130,7 @@ public class Networking : MonoBehaviour
                     break;
                 case "START_GAME":
                     if (OnGridRecieve != null)
-                        OnGridRecieve(serverData);
+                        OnGridRecieve(serverData.Replace("START_GAME,",""));
 
                     break;
                 case "WAIT_TURN":
