@@ -21,6 +21,8 @@ public class GameUI : MonoBehaviour
     public Animator menuAnimator;
     public GameObject menuTint;
 
+    public GameInfoManager gameInfoManager;
+
     void Start()
     {
         UpdateScore(0f);

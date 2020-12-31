@@ -18,6 +18,7 @@ public class Networking : MonoBehaviour
     public static event Action<int> OnJoinedGame;
     public static event Action<int,int> OnTileClicked;
     public static event Action<string> OnGridRecieve;
+    public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
 
     // Start is called before the first frame update
@@ -139,6 +140,11 @@ public class Networking : MonoBehaviour
                 case "WAIT_TURN":
                     if (OnWaitTurn != null)
                         OnWaitTurn();
+
+                    break;
+                case "GAME_INFO":
+                    if (OnGameInfo != null)
+                        OnGameInfo(serverData);
 
                     break;
                 case "YOUR_TURN":

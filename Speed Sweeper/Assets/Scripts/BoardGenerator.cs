@@ -47,6 +47,7 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnGridRecieve += GridRecieve;
         Networking.OnTileClicked += TileClicked;
         Networking.OnGameList += GameList;
+        Networking.OnGameInfo += GameInfo;
         Networking.OnWaitTurn += WaitTurn;
         Networking.OnYourTurn += YourTurn;
 
@@ -78,6 +79,22 @@ public class BoardGenerator : MonoBehaviour
         //need to get copy of grid from host to populate
 
         Networking.SendToServer(msgKey);
+    }
+    public void GetGameInfo()
+    {
+        string msgKey = "GAME_INFO";
+
+        Networking.SendToServer(msgKey);
+    }
+    public void GameInfo(string s)
+    {
+        string[] data = s.Split(',');
+
+        string gameId = data[1];
+        string NumberOfPlayers = data[2];
+        string CurrentPlayerTurn = data[3];
+
+        gameUI.gameInfoManager.UpdateGameInfo(gameId, NumberOfPlayers, CurrentPlayerTurn);
     }
     public void GameList(Dictionary<int, int> gameList)
     {
