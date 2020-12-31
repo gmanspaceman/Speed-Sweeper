@@ -114,9 +114,9 @@ public class GameState : MonoBehaviour
     {
         string bomb = msgKey;
         string co = "0", ro = "0";
-        for (int c = 0; c < board.GetLength(0); c++)
+        for (int c = 0; c < col; c++)
         {
-            for (int r = 0; r < board.GetLength(1); r++)
+            for (int r = 0; r < row; r++)
             {
                 bomb += board[c, r].isBomb ? ",1" : ",0";
 
@@ -148,9 +148,9 @@ public class GameState : MonoBehaviour
 
         round++;
 
-        for (int c = 0; c< board.GetLength(0); c++)
+        for (int c = 0; c< col; c++)
         {
-            for (int r = 0; r< board.GetLength(1); r++)
+            for (int r = 0; r< row; r++)
             {
                 if (board[c, r].tileState == Tile.TileState.Opened && !board[c, r].isBomb)
                     tilesExplored++;

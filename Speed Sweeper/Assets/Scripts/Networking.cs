@@ -4,6 +4,7 @@ using System.Threading;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Networking : MonoBehaviour
 {
@@ -51,7 +52,7 @@ public class Networking : MonoBehaviour
         while (true)
         {
             Networking.SendToServer("PING");
-            yield return new WaitForSeconds(5);
+            yield return new WaitForSeconds(1);
         }
     }
     public static void SendToServer(string msg)
@@ -89,6 +90,10 @@ public class Networking : MonoBehaviour
                 continue;
             }
 
+            #region Carry Data
+            //will need to just dump carry data if its getting to obigt
+            //this implies more message traffice than the loop can keep up with
+            //should only happen in a debug enviorment
             serverData = carryData;
             carryData = string.Empty;
 
@@ -98,11 +103,15 @@ public class Networking : MonoBehaviour
             //Carry over
             if (serverData.Contains(eom)) //Find the <EOM> tag
             {
-                if (!serverData.EndsWith(eom)) //split and store the rest
-                {   string[] splitInput = serverData.Split(new string[] { eom }, StringSplitOptions.None);
-                    serverData += splitInput[0];
-                    carryData = splitInput[1];
-                }
+                string[] splitInput = serverData.Split(new string[] { eom }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (splitInput.Length > 1)
+                    carryData = serverData.Substring(splitInput[0].Length + eom.Length);
+                
+                serverData = splitInput[0];
+
+                if (carryData != string.Empty)
+                    print("carryData: " + carryData);
             }
             else //patial packet keep the string and append the next read
             {
@@ -110,6 +119,7 @@ public class Networking : MonoBehaviour
                 continue;
             }
             serverData = serverData.Replace(eom, "");
+            #endregion
 
             //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
             print("Received: " + serverData);
@@ -159,8 +169,7 @@ public class Networking : MonoBehaviour
                     break;
                 case "START_GAME":
                     if (OnGridRecieve != null)
-                        OnGridRecieve(serverData.Replace("START_GAME,",""));
-
+                        OnGridRecieve(serverData.Replace("START_GAME,", ""));
                     break;
                 case "WAIT_TURN":
                     if (OnWaitTurn != null)

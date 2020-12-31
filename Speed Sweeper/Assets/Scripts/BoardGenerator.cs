@@ -131,6 +131,7 @@ public class BoardGenerator : MonoBehaviour
     }
     public void GridRecieve(string s)
     {
+
         //other person started the game
         //populate your board too
         PopulateBombs(g, s);
@@ -462,7 +463,6 @@ public class BoardGenerator : MonoBehaviour
     {
         if (t.tileState == Tile.TileState.Opened)
             return;
-
         //for each click send it to the server
         //either the server verifies and you wait for response
         //or just clicks in and it sends the click to the other user
@@ -582,12 +582,12 @@ public class BoardGenerator : MonoBehaviour
     {
         string[] bombs = syncString.Split(',');
         int bomb = 0;
-        int co = int.Parse(bombs[bombs.Length - 1]);
-        int ro = int.Parse(bombs[bombs.Length - 2]);
+        int co = int.Parse(bombs[bombs.Length - 2]);
+        int ro = int.Parse(bombs[bombs.Length - 1]);
 
-        for (int c = 0; c < _g.board.GetLength(0); c++)
+        for (int c = 0; c < _g.col; c++)
         {
-            for (int r = 0; r < _g.board.GetLength(1); r++)
+            for (int r = 0; r < _g.row; r++)
             {
                 if (bombs[bomb] == "1")
                     _g.board[c, r].makeBomb();
@@ -602,13 +602,12 @@ public class BoardGenerator : MonoBehaviour
             t.countNeighborBombs(_g.board);
         }
 
-        for (int c = 0; c < _g.board.GetLength(0); c++)
+        for (int c = 0; c < _g.col; c++)
         {
-            for (int r = 0; r < _g.board.GetLength(1); r++)
+            for (int r = 0; r < _g.row; r++)
             {
                 if (c == co && r == ro)
                 {
-                    //_g.board[c, r].makeStart();
                     TileWasClicked(_g.board[c, r]);
                     return;
                 }
