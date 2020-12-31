@@ -102,6 +102,7 @@ public class BoardGenerator : MonoBehaviour
         string msgKey = "START_GAME";   //build the board and then send this
         Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
 
+        g.myTurn = false;
         //g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
     }
     public void GridRecieve(string s)
@@ -109,6 +110,12 @@ public class BoardGenerator : MonoBehaviour
         //other person started the game
         //populate your board too
         PopulateBombs(g, s);
+
+        //I think what is happenis 
+        //tje board already has it open so it doesn
+        //trip update game barod logic;
+        //g.gamePhase = GameState.GamePhase.Playing;
+        g.UpdateGameState();
     }
     public void ClickTile(Tile t)
     {
