@@ -31,9 +31,10 @@ public class Networking : MonoBehaviour
         _stream = _tcpClient.GetStream();
 
         //strat a thread to listen
-        Thread t = new Thread(ReadFromServerThread);
-        t.Start();  //this will end up rejecting if too many ppl
-
+        //Thread t = new Thread(ReadFromServerThread);
+        //t.Start();  //this will end up rejecting if too many ppl
+        
+        StartCoroutine("ReadFromServerThread");
         StartCoroutine("PingServer");
     }
 
@@ -67,13 +68,15 @@ public class Networking : MonoBehaviour
             Console.WriteLine("Server must have closed the connection!!!!");
         }
     }
-    public static void ReadFromServerThread()
+    IEnumerator ReadFromServerThread()
     {
         Byte[] buffer = new Byte[1024];
         int inputBuffer;
 
         while (true)
         {
+            yield return null;
+
             if (!_stream.DataAvailable)
             {
                 Thread.Sleep(125);

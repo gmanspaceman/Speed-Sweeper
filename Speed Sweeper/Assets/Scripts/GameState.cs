@@ -118,10 +118,7 @@ public class GameState : MonoBehaviour
         {
             for (int r = 0; r < board.GetLength(1); r++)
             {
-                if (r != 4)
-                    bomb += board[c, r].isBomb ? ",1" : ",0";
-                else
-                    bomb += ",1";
+                bomb += board[c, r].isBomb ? ",1" : ",0";
 
                 if (board[c, r].isStart)
                 {

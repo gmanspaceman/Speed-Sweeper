@@ -20,6 +20,7 @@ public class BoardGenerator : MonoBehaviour
 
     public GameUI gameUI;
 
+    public ButtonListControl serverListControl;
     GameState g;
 
     [Range(6, 20)]
@@ -70,12 +71,6 @@ public class BoardGenerator : MonoBehaviour
     {
         g.gameId = gameId;
     }
-    public void GameList(Dictionary<int, int> gameList)
-    {
-        //Display the game list so user can choose what to join
-        foreach (KeyValuePair<int, int> k in gameList)
-            print("Game " + k.Key + " has " + k.Value + " players.");
-    }
     public void GetGameList()
     {
         string msgKey = "GET_GAMES";
@@ -83,6 +78,17 @@ public class BoardGenerator : MonoBehaviour
         //need to get copy of grid from host to populate
 
         Networking.SendToServer(msgKey);
+    }
+    public void GameList(Dictionary<int, int> gameList)
+    {
+        serverListControl.RemoveAllServerButton();
+        //Display the game list so user can choose what to join
+        foreach (KeyValuePair<int, int> k in gameList)
+        {
+            print("Game " + k.Key + " has " + k.Value + " players.");
+            serverListControl.AddServerButton(k.Key.ToString(), k.Value);
+        }
+
     }
     public void JoinGame(int gameId)
     {
@@ -557,8 +563,7 @@ public class BoardGenerator : MonoBehaviour
     public void PopulateBombs(GameState _g, string syncString)
     {
         string[] bombs = syncString.Split(',');
-        int bomb = 1;
-        Tile b = null;
+        int bomb = 0;
         int co = int.Parse(bombs[bombs.Length - 1]);
         int ro = int.Parse(bombs[bombs.Length - 2]);
 
@@ -569,15 +574,9 @@ public class BoardGenerator : MonoBehaviour
                 if (bombs[bomb] == "1")
                     _g.board[c, r].makeBomb();
 
-                if(c == co && r == ro)
-                {
-                    b = _g.board[c, r];
-                }
-
                 bomb++;
             }
         }
-        
 
         //PopulateNeighbors
         foreach (Tile t in _g.board)
@@ -585,7 +584,21 @@ public class BoardGenerator : MonoBehaviour
             t.countNeighborBombs(_g.board);
         }
 
-        TileWasClicked(b);
+        for (int c = 0; c < _g.board.GetLength(0); c++)
+        {
+            for (int r = 0; r < _g.board.GetLength(1); r++)
+            {
+                if (c == co && r == ro)
+                {
+                    //_g.board[c, r].makeStart();
+                    TileWasClicked(_g.board[c, r]);
+                    return;
+                }
+
+            }
+        }
+
+        
     }
     public void PopulateBombs(GameState _g, Tile b)
     {
