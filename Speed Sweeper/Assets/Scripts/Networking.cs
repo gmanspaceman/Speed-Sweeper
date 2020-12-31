@@ -80,7 +80,7 @@ public class Networking : MonoBehaviour
 
             if (!_stream.DataAvailable)
             {
-                Thread.Sleep(125);
+                //Thread.Sleep(125);
                 continue;
             }
             inputBuffer = _stream.Read(buffer, 0, buffer.Length);

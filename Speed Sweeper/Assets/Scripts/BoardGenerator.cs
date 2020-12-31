@@ -71,6 +71,7 @@ public class BoardGenerator : MonoBehaviour
     public void JoinedGame(int gameId)
     {
         g.gameId = gameId;
+        gameUI.gameInfoManager.gameObject.SetActive(true);
     }
     public void GetGameList()
     {
