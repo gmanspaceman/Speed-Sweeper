@@ -103,27 +103,51 @@ public class Networking : MonoBehaviour
             inputBuffer = _stream.Read(buffer, 0, buffer.Length);
             serverData += System.Text.Encoding.ASCII.GetString(buffer, 0, inputBuffer);
 
+            Queue<string> validMessages = new Queue<string>();
             //Carry over
             if (serverData.Contains(eom)) //Find the <EOM> tag
             {
+                //lets find a way to store all full messages right now
+                //just carry over partial message
+
                 string[] splitInput = serverData.Split(new string[] { eom }, StringSplitOptions.RemoveEmptyEntries);
 
-                if (splitInput.Length > 1)
-                    carryData = serverData.Substring(splitInput[0].Length + eom.Length);
-                
-                serverData = splitInput[0];
-
-                if (carryData != string.Empty)
-                    print("carryData: " + carryData);
+                if (serverData.EndsWith(eom))
+                {
+                    //all messages are full
+                    foreach (string msg in splitInput)
+                    {
+                        validMessages.Enqueue(msg.Replace(eom, ""));
+                        print("FullMsgQueued: " + msg);
+                    }
+                }
+                else
+                {
+                    //last message in is partial
+                    for(int ii = 0; ii < splitInput.Length - 1; ii++)
+                    {
+                        validMessages.Enqueue(splitInput[ii].Replace(eom, ""));
+                        print("FullMsgQueued: " + splitInput[ii]);
+                    }
+                    carryData = splitInput[splitInput.Length - 1];
+                    print("CarryData: " + carryData);
+                }
             }
             else //patial packet keep the string and append the next read
             {
                 carryData = serverData;
+
+                if (carryData != string.Empty)
+                    print("carryData: " + carryData);
+
                 continue;
             }
-            serverData = serverData.Replace(eom, "");
 
-            ///manage carry data
+            if (validMessages.Count == 0)
+                continue; // nothing on the valid queue, i dont think it can get here
+
+
+            ///flush some of the queue if its gettign big?
             ///if there 3 or more eom in the carry data dump gameinfo and gamelist
             ///
             //if(Regex.Matches(carryData, eom).Count > 3)
@@ -133,89 +157,80 @@ public class Networking : MonoBehaviour
 
             #endregion
 
-            //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
-            print("Received: " + serverData);
-
-            string[] parseMsg = serverData.Split(',');
-            string msgKey = parseMsg[0];
-
-            string clientResponse = "";
-            int gameId = -1;
-
-            switch (msgKey)
+            //loops through the queue
+            while (validMessages.Count != 0)
             {
-                //case "MADE_GAME":
-                //    gameId = int.Parse(parseMsg[1]);
-                //    if (OnMadeGame != null)
-                //        OnMadeGame(gameId);
+                serverData = validMessages.Dequeue();
 
-                //    break;
-                case "JOINED_GAME":
-                    gameId = int.Parse(parseMsg[1]);
-                    if (OnJoinedGame != null)
-                        OnJoinedGame(gameId);
+                //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
+                print("Processing: " + serverData);
 
-                    break;
-                case "GAME_LIST":
-                    Dictionary<int, int> gameList = new Dictionary<int, int>();
+                string[] parseMsg = serverData.Split(',');
+                string msgKey = parseMsg[0];
+                int gameId = -1;
 
-                    for (int ii = 1; ii < parseMsg.Length; ii = ii +2 )
-                    {
-                        int gameNum = int.Parse(parseMsg[ii]);
-                        int numberOfPlayers = int.Parse(parseMsg[ii+1]);
+                switch (msgKey)
+                {
+                    case "JOINED_GAME":
+                        gameId = int.Parse(parseMsg[1]);
+                        OnJoinedGame?.Invoke(gameId);
 
-                        gameList.Add(gameNum, numberOfPlayers);
-                    }
+                        break;
+                    case "GAME_LIST":
+                        Dictionary<int, int> gameList = new Dictionary<int, int>();
 
-                    if (OnGameList != null)
-                        OnGameList(gameList);
+                        for (int ii = 1; ii < parseMsg.Length; ii = ii + 2)
+                        {
+                            int gameNum = int.Parse(parseMsg[ii]);
+                            int numberOfPlayers = int.Parse(parseMsg[ii + 1]);
 
-                    break;
+                            gameList.Add(gameNum, numberOfPlayers);
+                        }
 
-                case "TILE_CLICKED":
-                    int c1 = int.Parse(parseMsg[1]);
-                    int r1 = int.Parse(parseMsg[2]);
-                    if (OnTileClicked != null)
-                        OnTileClicked(c1,r1);
+                        OnGameList?.Invoke(gameList);
 
-                    break;
-                case "TILE_RIGHTCLICKED":
-                    int c2 = int.Parse(parseMsg[1]);
-                    int r2 = int.Parse(parseMsg[2]);
-                    int st = int.Parse(parseMsg[3]);
-                    if (OnTileRightClicked != null)
-                        OnTileRightClicked(c2, r2,st);
+                        break;
 
-                    break;
-                case "START_GAME":
-                    if (OnGridRecieve != null)
-                        OnGridRecieve(serverData.Replace("START_GAME,", ""));
-                    break;
-                case "RESTART":
-                    if (OnRestart != null)
-                        OnRestart();
-                    break;
-                case "WAIT_TURN":
-                    if (OnWaitTurn != null)
-                        OnWaitTurn();
+                    case "TILE_CLICKED":
+                        int c1 = int.Parse(parseMsg[1]);
+                        int r1 = int.Parse(parseMsg[2]);
+                        OnTileClicked?.Invoke(c1, r1);
 
-                    break;
-                case "GAME_INFO":
-                    if (OnGameInfo != null)
-                        OnGameInfo(serverData);
+                        break;
+                    case "TILE_RIGHTCLICKED":
+                        int c2 = int.Parse(parseMsg[1]);
+                        int r2 = int.Parse(parseMsg[2]);
+                        int st = int.Parse(parseMsg[3]);
+                        OnTileRightClicked?.Invoke(c2, r2, st);
 
-                    break;
-                case "YOUR_TURN":
-                    if (OnYourTurn != null)
-                        OnYourTurn();
+                        break;
+                    case "START_GAME":
+                        OnGridRecieve?.Invoke(serverData.Replace("START_GAME,", ""));
+                        
+                        break;
+                    case "RESTART":
+                        OnRestart?.Invoke();
+                        
+                        break;
+                    case "WAIT_TURN":
+                        OnWaitTurn?.Invoke();
 
-                    break;
-                default:
+                        break;
+                    case "GAME_INFO":
+                        OnGameInfo?.Invoke(serverData);
 
-                    //clientResponse = "Hey Device! Your Client ID is: " + clientID.ToString() + "\n";
+                        break;
+                    case "YOUR_TURN":
+                        OnYourTurn?.Invoke();
 
-                    break;
+                        break;
+                    default:
 
+                        //clientResponse = "Hey Device! Your Client ID is: " + clientID.ToString() + "\n";
+
+                        break;
+
+                }
             }
         }
     }
