@@ -73,7 +73,7 @@ public class BoardGenerator : MonoBehaviour
     public void ServerSend_GetMidGame()
     {
         string msgKey = "MID_GAME";
-        Networking.SendToServer(string.Join(",",msgKey, g.PackMidGameBoardStateForServer(msgKey)));
+        Networking.SendToServer(g.PackMidGameBoardStateForServer(msgKey));
     }
     public void MidGame(string s)
     {
