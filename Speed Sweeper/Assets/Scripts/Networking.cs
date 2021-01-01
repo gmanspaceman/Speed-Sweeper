@@ -18,8 +18,10 @@ public class Networking : MonoBehaviour
 
     public static event Action OnWaitTurn;
     public static event Action OnYourTurn;
+    public static event Action OnRestart;
     public static event Action<int> OnJoinedGame;
     public static event Action<int,int> OnTileClicked;
+    public static event Action<int,int> OnTileRightClicked;
     public static event Action<string> OnGridRecieve;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
@@ -161,15 +163,26 @@ public class Networking : MonoBehaviour
                     break;
 
                 case "TILE_CLICKED":
-                    int c = int.Parse(parseMsg[1]);
-                    int r = int.Parse(parseMsg[2]);
+                    int c1 = int.Parse(parseMsg[1]);
+                    int r1 = int.Parse(parseMsg[2]);
                     if (OnTileClicked != null)
-                        OnTileClicked(c,r);
+                        OnTileClicked(c1,r1);
+
+                    break;
+                case "TILE_RIGHTCLICKED":
+                    int c2 = int.Parse(parseMsg[1]);
+                    int r2 = int.Parse(parseMsg[2]);
+                    if (OnTileRightClicked != null)
+                        OnTileRightClicked(c2, r2);
 
                     break;
                 case "START_GAME":
                     if (OnGridRecieve != null)
                         OnGridRecieve(serverData.Replace("START_GAME,", ""));
+                    break;
+                case "RESTART":
+                    if (OnRestart != null)
+                        OnRestart();
                     break;
                 case "WAIT_TURN":
                     if (OnWaitTurn != null)

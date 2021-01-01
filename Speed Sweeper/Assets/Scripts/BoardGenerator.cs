@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -37,6 +38,7 @@ public class BoardGenerator : MonoBehaviour
     float mouse1Time;
     float mouse2Time;
 
+    public static event Action OnEndGame;
 
     // Start is called before the first frame update
     void Start()
@@ -46,10 +48,14 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnJoinedGame += JoinedGame;
         Networking.OnGridRecieve += GridRecieve;
         Networking.OnTileClicked += TileClicked;
+        Networking.OnTileRightClicked += TileRightClicked;
         Networking.OnGameList += GameList;
         Networking.OnGameInfo += GameInfo;
         Networking.OnWaitTurn += WaitTurn;
         Networking.OnYourTurn += YourTurn;
+        Networking.OnRestart += Restart;
+
+        OnEndGame += EndGame;
 
         //if single player just call init
         initalizeGameState();
@@ -151,9 +157,20 @@ public class BoardGenerator : MonoBehaviour
 
         g.myTurn = false; // only allow 1 move
     }
+    public void RightClickTile(Tile t)
+    {
+        string msgKey = "TILE_RIGHTCLICKED";
+
+        string msg = string.Join(",", msgKey, t.c_position, t.r_position);
+        Networking.SendToServer(msg);
+    }
     public void TileClicked(int c, int r)
     {
         TileWasClicked(g.board[c,r]);
+    }
+    public void TileRightClicked(int c, int r)
+    {
+        TileWasRightClicked(g.board[c, r]);
     }
     public void WaitTurn()
     {
@@ -165,12 +182,29 @@ public class BoardGenerator : MonoBehaviour
     }
     public void EndGame()
     {
-        string msgKey = "END_GAME";
+        if (g.gameType == GameState.GameType.Multiplayer)
+        {
+            string msgKey = "END_GAME";
 
-        string msg = string.Join(",", msgKey, g.gameId);
-        Networking.SendToServer(msg);
+            string msg = string.Join(",", msgKey, g.gameId);
+            Networking.SendToServer(msg);
 
-        g.gameId = -1;
+            //g.gameId = -1; //okay so comenting this out then doesnt lock out game in udpate
+        }
+    }
+    public void Restart()
+    {
+        if (g.gameType == GameState.GameType.Multiplayer &&
+                        g.gameId != -1)
+            WaitTurn();
+
+        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+        initalizeGameState();
+    }
+    public void RestartGame()
+    {
+        string msgKey = "RESTART";
+        Networking.SendToServer(msgKey);
     }
     public void DropGame()
     {
@@ -230,16 +264,19 @@ public class BoardGenerator : MonoBehaviour
         if (!g.myTurn)
             return;
 
-        //repond to gamestatechagne here for now
-        if (g.gamePhase == GameState.GamePhase.Win || 
-            g.gamePhase == GameState.GamePhase.Lose)
-        { 
-            if (g.gameType == GameState.GameType.Multiplayer &&
-                g.gameId != -1)
-            {
-                EndGame();
-            }
-        }
+        //dont need to do this anymore becuase endgame event takes care if that
+        ////repond to gamestatechagne here for now
+        //if (g.gamePhase == GameState.GamePhase.Win || 
+        //    g.gamePhase == GameState.GamePhase.Lose)
+        //{ 
+        //    if (g.gameType == GameState.GameType.Multiplayer &&
+        //        g.gameId != -1)
+        //    {
+        //        //put it back in network config?
+        //        //g.gamePhase = GameState.GamePhase.NetworkConfig;
+        //        EndGame();
+        //    }
+        //}
 
 
             //User Input
@@ -257,16 +294,24 @@ public class BoardGenerator : MonoBehaviour
 
                     //buildGameBoard(g); //building new game
                     PopulateBombs(g, t);
-                    StartServerGame();
+
+                    if(g.gameType == GameState.GameType.Multiplayer &&
+                        g.gameId != -1)
+                        StartServerGame();
 
                 }
             }
-            else if (g.gamePhase == GameState.GamePhase.Win || g.gamePhase == GameState.GamePhase.Lose)
+            else if (g.gamePhase == GameState.GamePhase.Win || 
+                     g.gamePhase == GameState.GamePhase.Lose)
             {
                 if (Input.GetMouseButtonUp(0))
                 {
-                    gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
-                    initalizeGameState();
+                    Restart();
+
+                    if (g.gameType == GameState.GameType.Multiplayer &&
+                        g.gameId != -1)
+                        RestartGame();
+                    
                     return;
                 }
             }
@@ -292,7 +337,9 @@ public class BoardGenerator : MonoBehaviour
                 else if (Input.GetMouseButtonUp(0))
                 {
                     TileWasClicked(t);
-                    ClickTile(t);
+                    if (g.gameType == GameState.GameType.Multiplayer &&
+                        g.gameId != -1)
+                        ClickTile(t);
                 }
                 else if (Input.GetMouseButtonUp(1))
                 {
@@ -416,8 +463,12 @@ public class BoardGenerator : MonoBehaviour
         {
             case GameState.GamePhase.Lose:
                 StartCoroutine(AnimateBombs());
+                if (OnEndGame != null)
+                    OnEndGame();
                 return false;
-            case GameState.GamePhase.Win:                
+            case GameState.GamePhase.Win:
+                if (OnEndGame != null)
+                    OnEndGame();
                 return true;
             default:
                 break;
@@ -623,8 +674,8 @@ public class BoardGenerator : MonoBehaviour
 
         for (int i = 0; i < _g.numMines; i++)
         {
-            int c = Random.Range(0, _g.col);
-            int r = Random.Range(0, _g.row);
+            int c = UnityEngine.Random.Range(0, _g.col);
+            int r = UnityEngine.Random.Range(0, _g.row);
 
             if (!_g.board[c, r].isBomb && !_g.board[c, r].isStart)
             {
