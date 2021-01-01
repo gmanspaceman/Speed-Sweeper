@@ -485,7 +485,7 @@ public class BoardGenerator : MonoBehaviour
                 StartCoroutine(AnimateBombs());
                 if (OnEndGame != null)
                     OnEndGame();
-                return false;
+                return true;
             case GameState.GamePhase.Win:
                 if (OnEndGame != null)
                     OnEndGame();

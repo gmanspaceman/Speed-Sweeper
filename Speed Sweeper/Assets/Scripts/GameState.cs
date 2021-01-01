@@ -124,11 +124,29 @@ public class GameState : MonoBehaviour
                 board[c, r].isVisible = (b[(tileCount * 5 + 4) ] == "1") ? true : false;
                 board[c, r].isClicked = (b[(tileCount * 5 + 5) ] == "1") ? true : false;
 
-                board[c, r].UpdateTile();
-
                 tileCount++;
             }
         }
+
+        for (int c = 0; c < col; c++)
+        {
+            for (int r = 0; r < row; r++)
+            {
+                board[c, r].countNeighborBombs(board);
+
+                if (board[c, r].tileState == Tile.TileState.Opened)
+                    board[c, r].makeVisible();
+                if (board[c, r].isBomb)
+                    board[c, r].makeBomb();
+                if (board[c, r].isStart)
+                    board[c, r].makeStart();
+
+                board[c, r].UpdateTile();
+            }
+        }
+
+        
+
         UpdateGameState();
 
 
