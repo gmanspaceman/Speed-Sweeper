@@ -42,11 +42,8 @@ public class BoardGenerator : MonoBehaviour
     public static event Action OnDroppingGame;
 
     // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
-
-        gameUI = FindObjectOfType<GameUI>();
-
         Networking.OnJoinedGame += JoinedGame;
         Networking.OnGridRecieve += GridRecieve;
         Networking.OnTileClicked += TileClicked;
@@ -59,6 +56,13 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnMidGame += MidGame;
 
         OnEndGame += ServerSend_EndGame;
+    }
+    void Start()
+    {
+
+        gameUI = FindObjectOfType<GameUI>();
+
+
 
         //if single player just call init
         initalizeGameState();
@@ -69,7 +73,7 @@ public class BoardGenerator : MonoBehaviour
     public void ServerSend_GetMidGame()
     {
         string msgKey = "MID_GAME";
-        Networking.SendToServer(string.Join(",",msgKey, g.PackMidGameBoardStateForServer()));
+        Networking.SendToServer(string.Join(",",msgKey, g.PackMidGameBoardStateForServer(msgKey)));
     }
     public void MidGame(string s)
     {

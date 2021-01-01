@@ -9,13 +9,18 @@ public class ServerConnectionUIManager : MonoBehaviour
     public Button makeGame;
     public Button connectServer;
     public GameObject gameInfo;
-    
+
     // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
         Networking.OnJoinedGame += JoinedGameView;
         BoardGenerator.OnDroppingGame += DroppedGameView;
         Networking.OnServerConnected += ServerConnected;
+    }
+
+    void Start()
+    {
+        
     }
 
     // Update is called once per frame

@@ -90,9 +90,9 @@ public class GameState : MonoBehaviour
         }
     }
     public enum TileState { Unmarked, Flagged, Questioned, Opened };
-    public string PackMidGameBoardStateForServer()
+    public string PackMidGameBoardStateForServer(string s)
     {
-        string b = "MID_GAME";
+        string b = s;
 
         for (int c = 0; c < col; c++)
         {
