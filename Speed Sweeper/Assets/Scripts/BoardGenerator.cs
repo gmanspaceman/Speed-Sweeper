@@ -77,6 +77,7 @@ public class BoardGenerator : MonoBehaviour
     }
     public void MidGame(string s)
     {
+        initalizeGameState(); //i think i want to call this
         g.UnPackMidGameBoardStateForServer(s);    
     }
     public void ServerSend_MakeServerGame()
