@@ -17,7 +17,10 @@ public class Networking : MonoBehaviour
     public static TcpClient _tcpClient;
     public static NetworkStream _stream;
 
+    public static event Action OnServerConnected;
     public static event Action OnWaitTurn;
+    public static event Action OnGetMidGame;
+    public static event Action<string> OnMidGame;
     public static event Action OnYourTurn;
     public static event Action OnRestart;
     public static event Action<int> OnJoinedGame;
@@ -37,10 +40,12 @@ public class Networking : MonoBehaviour
         _tcpClient = new TcpClient(ipAddr, port);
         _stream = _tcpClient.GetStream();
 
+        OnServerConnected?.Invoke();
+
         //strat a thread to listen
         //Thread t = new Thread(ReadFromServerThread);
         //t.Start();  //this will end up rejecting if too many ppl
-        
+
         StartCoroutine("ReadFromServerThread");
         StartCoroutine("PingServer");
     }
@@ -104,6 +109,7 @@ public class Networking : MonoBehaviour
             serverData += System.Text.Encoding.ASCII.GetString(buffer, 0, inputBuffer);
 
             Queue<string> validMessages = new Queue<string>();
+            bool debugMsgQueueingAndCarry = false;
             //Carry over
             if (serverData.Contains(eom)) //Find the <EOM> tag
             {
@@ -118,7 +124,8 @@ public class Networking : MonoBehaviour
                     foreach (string msg in splitInput)
                     {
                         validMessages.Enqueue(msg.Replace(eom, ""));
-                        print("FullMsgQueued: " + msg);
+                        if(debugMsgQueueingAndCarry)
+                            print("FullMsgQueued: " + msg);
                     }
                 }
                 else
@@ -127,10 +134,12 @@ public class Networking : MonoBehaviour
                     for(int ii = 0; ii < splitInput.Length - 1; ii++)
                     {
                         validMessages.Enqueue(splitInput[ii].Replace(eom, ""));
-                        print("FullMsgQueued: " + splitInput[ii]);
+                        if (debugMsgQueueingAndCarry) 
+                            print("FullMsgQueued: " + splitInput[ii]);
                     }
                     carryData = splitInput[splitInput.Length - 1];
-                    print("CarryData: " + carryData);
+                    if (debugMsgQueueingAndCarry) 
+                        print("CarryData: " + carryData);
                 }
             }
             else //patial packet keep the string and append the next read
@@ -138,7 +147,8 @@ public class Networking : MonoBehaviour
                 carryData = serverData;
 
                 if (carryData != string.Empty)
-                    print("carryData: " + carryData);
+                    if (debugMsgQueueingAndCarry) 
+                        print("carryData: " + carryData);
 
                 continue;
             }
@@ -214,6 +224,14 @@ public class Networking : MonoBehaviour
                         break;
                     case "WAIT_TURN":
                         OnWaitTurn?.Invoke();
+
+                        break;
+                    case "GET_MIDGAME":
+                        OnGetMidGame?.Invoke();
+
+                        break;
+                    case "MID_GAME":
+                        OnMidGame?.Invoke(serverData);
 
                         break;
                     case "GAME_INFO":

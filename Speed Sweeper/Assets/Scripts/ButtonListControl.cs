@@ -32,7 +32,7 @@ public class ButtonListControl : MonoBehaviour
     }
     public void JoinGameButton(int gameId)
     {
-        boardGen.JoinGame(gameId);
+        boardGen.ServerSend_JoinGame(gameId);
     }
     public void RemoveAllServerButton()
     {

@@ -39,6 +39,7 @@ public class BoardGenerator : MonoBehaviour
     float mouse2Time;
 
     public static event Action OnEndGame;
+    public static event Action OnDroppingGame;
 
     // Start is called before the first frame update
     void Start()
@@ -51,12 +52,13 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnTileClicked += TileClicked;
         Networking.OnTileRightClicked += TileRightClicked;
         Networking.OnGameList += GameList;
-        Networking.OnGameInfo += GameInfo;
         Networking.OnWaitTurn += WaitTurn;
         Networking.OnYourTurn += YourTurn;
         Networking.OnRestart += Restart;
+        Networking.OnGetMidGame += ServerSend_GetMidGame;
+        Networking.OnMidGame += MidGame;
 
-        OnEndGame += EndGame;
+        OnEndGame += ServerSend_EndGame;
 
         //if single player just call init
         initalizeGameState();
@@ -64,8 +66,16 @@ public class BoardGenerator : MonoBehaviour
         //else
 
     }
-
-    public void MakeServerGame()
+    public void ServerSend_GetMidGame()
+    {
+        string msgKey = "MID_GAME";
+        Networking.SendToServer(string.Join(",",msgKey, g.PackMidGameBoardStateForServer()));
+    }
+    public void MidGame(string s)
+    {
+        g.UnPackMidGameBoardStateForServer(s);    
+    }
+    public void ServerSend_MakeServerGame()
     {
         //Networking.OpenServerConnection();
 
@@ -78,9 +88,9 @@ public class BoardGenerator : MonoBehaviour
     public void JoinedGame(int gameId)
     {
         g.gameId = gameId;
-        gameUI.gameInfoManager.gameObject.SetActive(true);
+        //gameUI.gameInfoManager.gameObject.SetActive(true);
     }
-    public void GetGameList()
+    public void ServerSend_GetGameList()
     {
         string msgKey = "GET_GAMES";
         //joining mid game will need more work
@@ -88,21 +98,11 @@ public class BoardGenerator : MonoBehaviour
 
         Networking.SendToServer(msgKey);
     }
-    public void GetGameInfo()
+    public void ServerSend_GetGameInfo()
     {
         string msgKey = "GAME_INFO";
 
         Networking.SendToServer(msgKey);
-    }
-    public void GameInfo(string s)
-    {
-        string[] data = s.Split(',');
-
-        string gameId = data[1];
-        string NumberOfPlayers = data[2];
-        string CurrentPlayerTurn = data[3];
-
-        gameUI.gameInfoManager.UpdateGameInfo(gameId, NumberOfPlayers, CurrentPlayerTurn);
     }
     public void GameList(Dictionary<int, int> gameList)
     {
@@ -115,7 +115,7 @@ public class BoardGenerator : MonoBehaviour
         }
 
     }
-    public void JoinGame(int gameId)
+    public void ServerSend_JoinGame(int gameId)
     {
         //Send this to a server
         string msgKey = "JOIN_GAME"; 
@@ -128,7 +128,7 @@ public class BoardGenerator : MonoBehaviour
 
         g.myTurn = false;
     }
-    public void StartServerGame()
+    public void ServerSend_StartServerGame()
     {
         string msgKey = "START_GAME";   //build the board and then send this
         Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
@@ -149,7 +149,7 @@ public class BoardGenerator : MonoBehaviour
         //g.gamePhase = GameState.GamePhase.Playing;
         g.UpdateGameState();
     }
-    public void ClickTile(Tile t)
+    public void ServerSend_ClickTile(Tile t)
     {
         string msgKey = "TILE_CLICKED";
 
@@ -158,7 +158,7 @@ public class BoardGenerator : MonoBehaviour
 
         g.myTurn = false; // only allow 1 move
     }
-    public void RightClickTile(Tile t, Tile.TileState state)
+    public void ServerSend_RightClickTile(Tile t, Tile.TileState state)
     {
         string msgKey = "TILE_RIGHTCLICKED";
 
@@ -168,7 +168,7 @@ public class BoardGenerator : MonoBehaviour
         else if (state == Tile.TileState.Unmarked)
             stt = "0";
 
-        string msg = string.Join(",", msgKey, t.c_position, t.r_position);
+        string msg = string.Join(",", msgKey, t.c_position, t.r_position, stt);
         Networking.SendToServer(msg);
     }
     public void TileClicked(int c, int r)
@@ -192,7 +192,7 @@ public class BoardGenerator : MonoBehaviour
     {
         g.myTurn = true;
     }
-    public void EndGame()
+    public void ServerSend_EndGame()
     {
         if (g.gameType == GameState.GameType.Multiplayer)
         {
@@ -206,24 +206,37 @@ public class BoardGenerator : MonoBehaviour
     }
     public void Restart()
     {
-        if (g.gameType == GameState.GameType.Multiplayer &&
-                        g.gameId != -1)
-            WaitTurn();
+        float id = g.gameId;
 
         gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         initalizeGameState();
+
+        if (g.gameType == GameState.GameType.Multiplayer && id != -1)
+        {
+            g.gameId = id;
+            //i think i can do pregame here
+            g.gamePhase = GameState.GamePhase.PreGame;
+
+            WaitTurn();
+        }
+
+        
     }
-    public void RestartGame()
+    public void ServerSend_RestartGame()
     {
         string msgKey = "RESTART";
         Networking.SendToServer(msgKey);
     }
-    public void DropGame()
+    public void ServerSend_DropGame()
     {
         string msgKey = "DROP_GAME";
 
         string msg = string.Join(",", msgKey, g.gameId);
         Networking.SendToServer(msg);
+
+        OnDroppingGame?.Invoke();
+
+        //gameUI.gameInfoManager.gameObject.SetActive(false);
 
         g.gameId = -1;
     }
@@ -260,6 +273,7 @@ public class BoardGenerator : MonoBehaviour
             return;
         
         UpdateUI();
+        AniateClickDownHover();
 
         if (g.gamePhase == GameState.GamePhase.NetworkConfig)
         {
@@ -271,27 +285,15 @@ public class BoardGenerator : MonoBehaviour
 
             //else do server stuff
             //waiting to see player hosts or joins
+            //dont need this now but maybe future
  
         }
         if (!g.myTurn)
             return;
 
-        //dont need to do this anymore becuase endgame event takes care if that
-        ////repond to gamestatechagne here for now
-        //if (g.gamePhase == GameState.GamePhase.Win || 
-        //    g.gamePhase == GameState.GamePhase.Lose)
-        //{ 
-        //    if (g.gameType == GameState.GameType.Multiplayer &&
-        //        g.gameId != -1)
-        //    {
-        //        //put it back in network config?
-        //        //g.gamePhase = GameState.GamePhase.NetworkConfig;
-        //        EndGame();
-        //    }
-        //}
+        
 
-
-            //User Input
+        //User Input
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
         {
             Vector3 v = Input.mousePosition;
@@ -309,7 +311,7 @@ public class BoardGenerator : MonoBehaviour
 
                     if(g.gameType == GameState.GameType.Multiplayer &&
                         g.gameId != -1)
-                        StartServerGame();
+                        ServerSend_StartServerGame();
 
                 }
             }
@@ -322,15 +324,13 @@ public class BoardGenerator : MonoBehaviour
 
                     if (g.gameType == GameState.GameType.Multiplayer &&
                         g.gameId != -1)
-                        RestartGame();
+                        ServerSend_RestartGame();
                     
                     return;
                 }
             }
             else if (g.gamePhase == GameState.GamePhase.Playing)
             {
-                AniateClickDownHover();
-
                 mouse1Time = (Input.GetMouseButtonUp(0)) ? Time.time : mouse1Time;
                 mouse2Time = (Input.GetMouseButtonUp(1)) ? Time.time : mouse2Time;
 
@@ -348,15 +348,23 @@ public class BoardGenerator : MonoBehaviour
                 }
                 else if (Input.GetMouseButtonUp(0))
                 {
-                    TileWasClicked(t);
-                    if (g.gameType == GameState.GameType.Multiplayer &&
-                        g.gameId != -1)
-                        ClickTile(t);
+                    if (t.tileState != Tile.TileState.Opened)
+                    {
+                        TileWasClicked(t);
+
+                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                            ServerSend_ClickTile(t);
+                    }
                 }
                 else if (Input.GetMouseButtonUp(1))
                 {
-                    TileWasRightClicked(t);
-                    RightClickTile(t, t.tileState);
+                    if (t.tileState != Tile.TileState.Opened)
+                    {
+                        TileWasRightClicked(t);
+
+                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                            ServerSend_RightClickTile(t, t.tileState);
+                    }
                 }
             }
         }
@@ -378,46 +386,41 @@ public class BoardGenerator : MonoBehaviour
     {
         if (Input.GetMouseButton(0))
         {
-            if (g.gamePhase != GameState.GamePhase.Win &&
-            g.gamePhase != GameState.GamePhase.Lose)
+            if (g.gamePhase != GameState.GamePhase.Win && g.gamePhase != GameState.GamePhase.Lose)
             {
                 Vector3 v = Input.mousePosition;
                 Tile t = GetTileClicked(v);
-
-                //if (t == null)
-                //    return;
 
                 //unclick everythign that shouldnt be clicked
                 for (int c = 0; c < Columns; c++)
                 {
                     for (int r = 0; r < Rows; r++)
                     {
-                        if (!g.board[c, r].isVisible)
+                        Vector2Int tmp = new Vector2Int(c, r);
+
+                        if(Input.GetMouseButton(1) && t.neighbors.Contains(tmp))
+                        {
+                            if (g.board[c,r].tileState != Tile.TileState.Flagged && g.board[c, r].tileState != Tile.TileState.Questioned)
+                            {
+                                g.board[c, r].makeClicked();
+                            }
+                        }
+                        else if (t.c_position == c && t.r_position == r)
+                        {
+                            if (t.tileState != Tile.TileState.Flagged && t.tileState != Tile.TileState.Questioned)
+                            {
+                                t.makeClicked();
+                            }
+                        }
+                        else if (!g.board[c, r].isVisible)
                         {
                             g.board[c, r].makeUnClicked();
                         }
                     }
                 }
-                //if its a double click hover press neighbors
-                if (Input.GetMouseButton(1))
-                {
-                    foreach (Vector2 n in t.neighbors)
-                    {
-                        if (g.board[(int)n.x, (int)n.y].tileState != Tile.TileState.Flagged &&
-                            g.board[(int)n.x, (int)n.y].tileState != Tile.TileState.Questioned)
-                        {
-                            g.board[(int)n.x, (int)n.y].makeClicked();
-                        }
-                    }
-                }
-                if (t.tileState != Tile.TileState.Flagged &&
-                    t.tileState != Tile.TileState.Questioned)
-                {
-                    t.makeClicked();
-                }
             }
         }
-        if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
+        else 
         {
             //This undoes the mous click hover
             foreach (Vector2Int rc in g.boardCoords)

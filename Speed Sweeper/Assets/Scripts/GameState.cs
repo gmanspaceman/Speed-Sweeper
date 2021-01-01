@@ -89,25 +89,49 @@ public class GameState : MonoBehaviour
             }
         }
     }
-    public byte[] SerializeGameState(GameState gameState)
+    public enum TileState { Unmarked, Flagged, Questioned, Opened };
+    public string PackMidGameBoardStateForServer()
     {
-        BinaryFormatter bf = new BinaryFormatter();
-        using (var ms = new MemoryStream())
+        string b = "MID_GAME";
+
+        for (int c = 0; c < col; c++)
         {
-            bf.Serialize(ms, gameState);
-            return ms.ToArray();
+            for (int r = 0; r < row; r++)
+            {
+                b = string.Join(",", b,
+                                     board[c, r].isBomb ? "1" : "0",
+                                    ((int)board[c, r].tileState).ToString(),
+                                     board[c, r].isStart ? "1" : "0",
+                                     board[c, r].isVisible ? "1" : "0",
+                                     board[c, r].isClicked ? "1" : "0");
+            }
         }
+
+        return b;
     }
-    public GameState DeSerializeGameState(byte[] arrBytes)
+    public void UnPackMidGameBoardStateForServer(string s)
     {
-        using (var memStream = new MemoryStream())
+        string[] b = s.Split(',');
+
+        int tileCount = 0;
+        for (int c = 0; c < col; c++)
         {
-            var binForm = new BinaryFormatter();
-            memStream.Write(arrBytes, 0, arrBytes.Length);
-            memStream.Seek(0, SeekOrigin.Begin);
-            GameState obj = (GameState)binForm.Deserialize(memStream);
-            return obj;
+            for (int r = 0; r < row; r++)
+            {
+                board[c, r].isBomb = (b[(tileCount * 5 + 1)] == "1") ? true : false;
+                board[c, r].tileState = (Tile.TileState)(int.Parse(b[(tileCount * 5 + 2) ]));
+                board[c, r].isStart = (b[(tileCount * 5 + 3) ] == "1") ? true : false;
+                board[c, r].isVisible = (b[(tileCount * 5 + 4) ] == "1") ? true : false;
+                board[c, r].isClicked = (b[(tileCount * 5 + 5) ] == "1") ? true : false;
+
+                board[c, r].UpdateTile();
+
+                tileCount++;
+            }
         }
+        UpdateGameState();
+
+
     }
 
     public string SerializeInitBoardForServer(string msgKey)
