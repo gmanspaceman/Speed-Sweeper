@@ -43,6 +43,7 @@ public class BoardGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
         gameUI = FindObjectOfType<GameUI>();
 
         Networking.OnJoinedGame += JoinedGame;
@@ -157,9 +158,15 @@ public class BoardGenerator : MonoBehaviour
 
         g.myTurn = false; // only allow 1 move
     }
-    public void RightClickTile(Tile t)
+    public void RightClickTile(Tile t, Tile.TileState state)
     {
         string msgKey = "TILE_RIGHTCLICKED";
+
+        string stt = "2";
+        if (state == Tile.TileState.Flagged)
+            stt = "1";
+        else if (state == Tile.TileState.Unmarked)
+            stt = "0";
 
         string msg = string.Join(",", msgKey, t.c_position, t.r_position);
         Networking.SendToServer(msg);
@@ -168,9 +175,14 @@ public class BoardGenerator : MonoBehaviour
     {
         TileWasClicked(g.board[c,r]);
     }
-    public void TileRightClicked(int c, int r)
+    public void TileRightClicked(int c, int r, int st)
     {
-        TileWasRightClicked(g.board[c, r]);
+        if ((st == 0 && g.board[c, r].tileState == Tile.TileState.Flagged) ||
+            (st == 1 && g.board[c, r].tileState == Tile.TileState.Unmarked))
+        { 
+            TileWasRightClicked(g.board[c, r]); 
+        }
+        //if st ==2 somethign is wrong      
     }
     public void WaitTurn()
     {
@@ -344,6 +356,7 @@ public class BoardGenerator : MonoBehaviour
                 else if (Input.GetMouseButtonUp(1))
                 {
                     TileWasRightClicked(t);
+                    RightClickTile(t, t.tileState);
                 }
             }
         }

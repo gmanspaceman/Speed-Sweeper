@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 public class Networking : MonoBehaviour
 {
@@ -21,7 +22,7 @@ public class Networking : MonoBehaviour
     public static event Action OnRestart;
     public static event Action<int> OnJoinedGame;
     public static event Action<int,int> OnTileClicked;
-    public static event Action<int,int> OnTileRightClicked;
+    public static event Action<int,int, int> OnTileRightClicked;
     public static event Action<string> OnGridRecieve;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
@@ -121,6 +122,15 @@ public class Networking : MonoBehaviour
                 continue;
             }
             serverData = serverData.Replace(eom, "");
+
+            ///manage carry data
+            ///if there 3 or more eom in the carry data dump gameinfo and gamelist
+            ///
+            //if(Regex.Matches(carryData, eom).Count > 3)
+            //{
+            //    Regex.Replace(carryData, "GAME_LIST.+" + eom, string.Empty);
+            //}
+
             #endregion
 
             //Console.WriteLine("{1}: Received: {0}", serverData, Thread.CurrentThread.ManagedThreadId);
@@ -172,8 +182,9 @@ public class Networking : MonoBehaviour
                 case "TILE_RIGHTCLICKED":
                     int c2 = int.Parse(parseMsg[1]);
                     int r2 = int.Parse(parseMsg[2]);
+                    int st = int.Parse(parseMsg[3]);
                     if (OnTileRightClicked != null)
-                        OnTileRightClicked(c2, r2);
+                        OnTileRightClicked(c2, r2,st);
 
                     break;
                 case "START_GAME":
