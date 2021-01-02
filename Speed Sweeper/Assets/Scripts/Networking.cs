@@ -6,6 +6,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
+using UnityEngine.UI;
 
 public class Networking : MonoBehaviour
 {
@@ -19,6 +21,7 @@ public class Networking : MonoBehaviour
 
     public static event Action OnServerConnected;
     public static event Action OnWaitTurn;
+    public static event Action<float> OnPingPong;
     public static event Action OnGetMidGame;
     public static event Action<string> OnMidGame;
     public static event Action OnYourTurn;
@@ -30,9 +33,18 @@ public class Networking : MonoBehaviour
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
 
+    public Stopwatch pingPong;
+ 
     // Start is called before the first frame update
+    void Awake()
+    {
+        
+    }
+    
     private void Start()
     {
+        pingPong = new Stopwatch();
+
         OpenServerConnection();
     }
     void OpenServerConnection()
@@ -59,6 +71,7 @@ public class Networking : MonoBehaviour
     {
         while (true)
         {
+            pingPong.Restart();
             Networking.SendToServer("PING");
             yield return new WaitForSeconds(1);
         }
@@ -240,6 +253,10 @@ public class Networking : MonoBehaviour
                         break;
                     case "YOUR_TURN":
                         OnYourTurn?.Invoke();
+
+                        break;
+                    case "PONG":
+                        OnPingPong?.Invoke(pingPong.ElapsedMilliseconds);
 
                         break;
                     default:

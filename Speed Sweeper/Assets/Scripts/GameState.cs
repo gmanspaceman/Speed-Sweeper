@@ -106,7 +106,7 @@ public class GameState : MonoBehaviour
                                      board[c, r].isClicked ? "1" : "0");
             }
         }
-
+        b = string.Join(",", b,playTime);
         return b;
     }
     public void UnPackMidGameBoardStateForServer(string s)
@@ -127,6 +127,7 @@ public class GameState : MonoBehaviour
                 tileCount++;
             }
         }
+        playTime = float.Parse(b[b.Length - 1]);
 
         for (int c = 0; c < col; c++)
         {

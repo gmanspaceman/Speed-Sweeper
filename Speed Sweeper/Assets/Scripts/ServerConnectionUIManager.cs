@@ -9,6 +9,7 @@ public class ServerConnectionUIManager : MonoBehaviour
     public Button makeGame;
     public Button connectServer;
     public GameObject gameInfo;
+    public Text ping;
 
     // Start is called before the first frame update
     private void Awake()
@@ -16,11 +17,16 @@ public class ServerConnectionUIManager : MonoBehaviour
         Networking.OnJoinedGame += JoinedGameView;
         BoardGenerator.OnDroppingGame += DroppedGameView;
         Networking.OnServerConnected += ServerConnected;
+        Networking.OnPingPong += UpdatePing;
     }
 
     void Start()
     {
         
+    }
+    public void UpdatePing(float f)
+    {
+        ping.text = "Ping: " + f + " ms";
     }
 
     // Update is called once per frame

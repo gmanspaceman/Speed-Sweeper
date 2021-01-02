@@ -54,6 +54,7 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnRestart += Restart;
         Networking.OnGetMidGame += ServerSend_GetMidGame;
         Networking.OnMidGame += MidGame;
+        Networking.OnServerConnected += ServerSend_GetGameList;
 
         OnEndGame += ServerSend_EndGame;
     }
@@ -79,13 +80,10 @@ public class BoardGenerator : MonoBehaviour
     {
         float id = g.gameId;
 
-        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+        //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         initalizeGameState();
 
-        if (g.gameType == GameState.GameType.Multiplayer && id != -1)
-        {
-            g.gameId = id;
-        }
+        g.gameId = id;
 
         g.UnPackMidGameBoardStateForServer(s);    
     }
@@ -222,7 +220,7 @@ public class BoardGenerator : MonoBehaviour
     {
         float id = g.gameId;
 
-        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+        //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         initalizeGameState();
 
         if (g.gameType == GameState.GameType.Multiplayer && id != -1)
@@ -257,6 +255,7 @@ public class BoardGenerator : MonoBehaviour
 
     public void initalizeGameState()
     {
+        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
         mouse1Time = 0f;
         mouse2Time = 0f;
@@ -302,7 +301,7 @@ public class BoardGenerator : MonoBehaviour
             //dont need this now but maybe future
  
         }
-        if (!g.myTurn)
+        if (!g.myTurn && g.gameId != -1)
             return;
 
         
