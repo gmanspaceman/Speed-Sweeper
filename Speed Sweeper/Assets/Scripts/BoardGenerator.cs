@@ -77,7 +77,16 @@ public class BoardGenerator : MonoBehaviour
     }
     public void MidGame(string s)
     {
-        initalizeGameState(); //i think i want to call this
+        float id = g.gameId;
+
+        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+        initalizeGameState();
+
+        if (g.gameType == GameState.GameType.Multiplayer && id != -1)
+        {
+            g.gameId = id;
+        }
+
         g.UnPackMidGameBoardStateForServer(s);    
     }
     public void ServerSend_MakeServerGame()
