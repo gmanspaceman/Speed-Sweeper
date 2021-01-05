@@ -16,7 +16,7 @@ public class ServerConnectionUIManager : MonoBehaviour
     {
         Networking.OnJoinedGame += JoinedGameView;
         BoardGenerator.OnDroppingGame += DroppedGameView;
-        Networking.OnServerConnected += ServerConnected;
+        Networking.OnTCPServerConnected += ServerConnected;
         Networking.OnPingPong += UpdatePing;
     }
 

@@ -54,7 +54,7 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnRestart += Restart;
         Networking.OnGetMidGame += ServerSend_GetMidGame;
         Networking.OnMidGame += MidGame;
-        Networking.OnServerConnected += ServerSend_GetGameList;
+        Networking.OnTCPServerConnected += ServerSend_GetGameList;
 
         OnEndGame += ServerSend_EndGame;
     }
@@ -206,7 +206,7 @@ public class BoardGenerator : MonoBehaviour
     }
     public void ServerSend_EndGame()
     {
-        if (g.gameType == GameState.GameType.Multiplayer)
+        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
         {
             string msgKey = "END_GAME";
 
