@@ -12,7 +12,9 @@ var WebSocketJsLib = {
 		window.wsclient = new WebSocket(init_url);
 		window.wsclient.onopen = function(evt){ 
 			console.log("[open]"+init_url);
-			window.wsclient.send("hello");
+			console.log("[Ready State]"+window.wsclient.readyState);
+			console.log("[URL]"+window.wsclient.url);
+			//window.wsclient.send("hello<EOM>");
 		}; 
 		window.wsclient.onclose = function(evt) {
 			console.log("[close] "+evt.code+":"+evt.reason);
@@ -22,7 +24,7 @@ var WebSocketJsLib = {
 			if (received_msg == "hello") {
 				window.wsclient.send("hello");
 			} else {
-				console.log("[recv] "+received_msg);
+				//console.log("[jslib recv] "+received_msg);
 				SendMessage('Server Stuff', 'RecvString', received_msg);	
 			}
 		}; 
@@ -34,14 +36,14 @@ var WebSocketJsLib = {
 	},
 	State: function(){
 	    var status = 0;
-		if ((typeof window.wsclient !== "undefined")&& (window.wsclient !== null))
-			status = window.wsclient.readystate;
-		return status;
+		//if ((typeof window.wsclient !== "undefined")&& (window.wsclient !== null))
+		//	status = window.wsclient.readyState;
+		return window.wsclient.readyState;
 	},
 	Send: function(msg){
 		var message = Pointer_stringify(msg);
 		if (typeof window.wsclient !== "undefined") {
-			console.log("[send] "+message);
+			//console.log("[jslib send] "+message);
 			window.wsclient.send(message);		
 		} else {
 			console.log("[send-failed] "+message);

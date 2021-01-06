@@ -23,6 +23,8 @@ public class BoardGenerator : MonoBehaviour
 
     public ButtonListControl serverListControl;
     GameState g;
+    int clientId;
+    int myTurnCount;
 
     [Range(6, 20)]
     public int Rows = 6;
@@ -48,6 +50,7 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnGridRecieve += GridRecieve;
         Networking.OnTileClicked += TileClicked;
         Networking.OnTileRightClicked += TileRightClicked;
+        Networking.OnTileLeftAndRightClicked += TileLeftAndRightClicked;
         Networking.OnGameList += GameList;
         Networking.OnWaitTurn += WaitTurn;
         Networking.OnYourTurn += YourTurn;
@@ -55,21 +58,18 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnGetMidGame += ServerSend_GetMidGame;
         Networking.OnMidGame += MidGame;
         Networking.OnTCPServerConnected += ServerSend_GetGameList;
+        Networking.OnWebSocketServerConnected += ServerSend_GetGameList;
+        Networking.OnGameInfo += UpdateGameInfo;
 
         OnEndGame += ServerSend_EndGame;
     }
     void Start()
     {
-
         gameUI = FindObjectOfType<GameUI>();
-
-
-
+        clientId = -1;
+        myTurnCount = 0;
         //if single player just call init
         initalizeGameState();
-
-        //else
-
     }
     public void ServerSend_GetMidGame()
     {
@@ -87,6 +87,28 @@ public class BoardGenerator : MonoBehaviour
 
         g.UnPackMidGameBoardStateForServer(s);    
     }
+    public void UpdateGameInfo(string s)
+    {
+        string[] data = s.Split(',');
+        string _gameId = data[1];
+        string _NumberOfPlayers = data[2];
+        string _CurrentPlayerTurn = data[3];
+
+        //literalyl just here to fix turn desyn issue
+        //maybe im not getting yourturn packet
+        if (clientId == int.Parse(_CurrentPlayerTurn))
+            myTurnCount++;
+        else
+            myTurnCount = 0;
+
+        myTurnCount = myTurnCount > 2 ? 2 : myTurnCount;
+
+        if (myTurnCount == 2)
+            g.myTurn = true;
+        else
+            g.myTurn = false;
+
+    }
     public void ServerSend_MakeServerGame()
     {
         //Networking.OpenServerConnection();
@@ -95,11 +117,13 @@ public class BoardGenerator : MonoBehaviour
         string msgKey = "MAKE_GAME"; //figure out extra tokens
 
         Networking.SendToServer(msgKey);
+        myTurnCount = 2;
         g.myTurn = true;
     }
-    public void JoinedGame(int gameId)
+    public void JoinedGame(int gameId, int _clientId)
     {
         g.gameId = gameId;
+        clientId = _clientId;
         //gameUI.gameInfoManager.gameObject.SetActive(true);
     }
     public void ServerSend_GetGameList()
@@ -138,6 +162,7 @@ public class BoardGenerator : MonoBehaviour
 
         Networking.SendToServer(msg);
 
+        myTurnCount = 0;
         g.myTurn = false;
     }
     public void ServerSend_StartServerGame()
@@ -145,6 +170,7 @@ public class BoardGenerator : MonoBehaviour
         string msgKey = "START_GAME";   //build the board and then send this
         Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
 
+        myTurnCount = 0;
         g.myTurn = false;
         //g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
     }
@@ -168,6 +194,17 @@ public class BoardGenerator : MonoBehaviour
         string msg = string.Join(",", msgKey, t.c_position, t.r_position);
         Networking.SendToServer(msg);
 
+        myTurnCount = 0;
+        g.myTurn = false; // only allow 1 move
+    }
+    public void ServerSend_LeftAndRightClickTile(Tile t)
+    {
+        string msgKey = "TILE_LEFTANDRIGHTCLICKED";
+
+        string msg = string.Join(",", msgKey, t.c_position, t.r_position);
+        Networking.SendToServer(msg);
+
+        myTurnCount = 0;
         g.myTurn = false; // only allow 1 move
     }
     public void ServerSend_RightClickTile(Tile t, Tile.TileState state)
@@ -187,6 +224,10 @@ public class BoardGenerator : MonoBehaviour
     {
         TileWasClicked(g.board[c,r]);
     }
+    public void TileLeftAndRightClicked(int c, int r)
+    {
+        TileWasRightAndLeftClicked(g.board[c, r]);
+    }
     public void TileRightClicked(int c, int r, int st)
     {
         if ((st == 0 && g.board[c, r].tileState == Tile.TileState.Flagged) ||
@@ -198,6 +239,7 @@ public class BoardGenerator : MonoBehaviour
     }
     public void WaitTurn()
     {
+        myTurnCount = 0;
         g.myTurn = false;
     }
     public void YourTurn()
@@ -358,6 +400,9 @@ public class BoardGenerator : MonoBehaviour
                 else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f)
                 {
                     TileWasRightAndLeftClicked(t);
+
+                    if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                        ServerSend_LeftAndRightClickTile(t);
                 }
                 else if (Input.GetMouseButtonUp(0))
                 {

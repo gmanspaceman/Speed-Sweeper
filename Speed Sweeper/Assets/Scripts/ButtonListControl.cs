@@ -24,7 +24,7 @@ public class ButtonListControl : MonoBehaviour
     {
         GameObject button = Instantiate(buttonTemplate);
         button.SetActive(true);
-        button.GetComponent<ButtonListButton>().SetText("Join Game: " + s + "" + " Players: " + players);
+        button.GetComponent<ButtonListButton>().SetText("Game: " + s + "" + " Players: " + players);
         button.transform.SetParent(buttonTemplate.transform.parent, false);
 
         button.GetComponent<Button>().onClick.AddListener(() => JoinGameButton(int.Parse(s)));

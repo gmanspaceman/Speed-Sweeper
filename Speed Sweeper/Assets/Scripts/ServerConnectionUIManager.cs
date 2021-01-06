@@ -34,7 +34,7 @@ public class ServerConnectionUIManager : MonoBehaviour
     {
         connectServer.interactable = false;
     }
-    public void JoinedGameView(int gameId)
+    public void JoinedGameView(int gameId, int clientId)
     {
         leaveGame.interactable = true;
         makeGame.interactable = false;

@@ -1,16 +1,9 @@
 ﻿using UnityEngine;
 using System.Net.Sockets;
-using System.Threading;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-//using System.Net.WebSockets;
-using System.Text;
-using Assets.Scripts;
-using System.Net.WebSockets;
-using WebSocketSharp;
-using UnityEngine.Networking;
 using System.Runtime.InteropServices;
 
 public class Networking : MonoBehaviour
@@ -23,9 +16,10 @@ public class Networking : MonoBehaviour
     public static event Action<string> OnMidGame;
     public static event Action OnYourTurn;
     public static event Action OnRestart;
-    public static event Action<int> OnJoinedGame;
+    public static event Action<int, int> OnJoinedGame;
     public static event Action<int,int> OnTileClicked;
     public static event Action<int,int, int> OnTileRightClicked;
+    public static event Action<int,int> OnTileLeftAndRightClicked;
     public static event Action<string> OnGridRecieve;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
@@ -53,7 +47,7 @@ public class Networking : MonoBehaviour
 
     //private static ClientWebSocket cws = null;
 
-    ArraySegment<byte> buf = new ArraySegment<byte>(new byte[1024]);
+    //ArraySegment<byte> buf = new ArraySegment<byte>(new byte[1024]);
 
     #region WebSocketJSLib Implement
     [DllImport("__Internal")]
@@ -70,6 +64,7 @@ public class Networking : MonoBehaviour
 
     [DllImport("__Internal")]
     private static extern void Close(); //close websocket connection
+    
     Queue<string> recvList = new Queue<string>(); //keep receive messages
 
     string serverDataWS = string.Empty;
@@ -86,7 +81,7 @@ public class Networking : MonoBehaviour
         
         if (websock)
         {
-            OpenWebSocketServerConnection();
+            StartCoroutine(OpenWebSocketServerConnection());
         }
         else
         {
@@ -103,43 +98,47 @@ public class Networking : MonoBehaviour
         _tcpClient = new TcpClient(ipAddr, port);
         _stream = _tcpClient.GetStream();
 
+
         OnTCPServerConnected?.Invoke();
 
         StartCoroutine("EnqueueTCPFromServerThread");
     }
-    void OpenWebSocketServerConnection()
+    IEnumerator OpenWebSocketServerConnection()
     {
         //cws = new ClientWebSocket();
         InitWebSocket(wsString);
+        //Thread.Sleep(5000);
+        while (State() != 1)
+            yield return null; //wait till it connects before throwing the event
 
         OnWebSocketServerConnected?.Invoke();
-        
         //enqueing happens in jslib
     }
     IEnumerator DispatchQueueFromServer()
     {
         while (true)
         {
-            if (recvList.Count > 0)
+            if (recvList.Count != 0)
             {         //When our message queue has string coming.
-                Dispatch(recvList.Dequeue());    //We will dequeue message and send to Dispatch function.
+                Dispatch(recvList.Dequeue());
             }
             yield return null;
         }
     }
     void Dispatch(string msg)
     {
-        print("Processing: " + msg);
+        if (!msg.Contains("PONG"))
+            print("Recv: " + msg);
 
         string[] parseMsg = msg.Split(',');
         string msgKey = parseMsg[0];
         int gameId = -1;
-
         switch (msgKey)
         {
             case "JOINED_GAME":
                 gameId = int.Parse(parseMsg[1]);
-                OnJoinedGame?.Invoke(gameId);
+                int clientId = int.Parse(parseMsg[2]);
+                OnJoinedGame?.Invoke(gameId, clientId);
 
                 break;
             case "GAME_LIST":
@@ -161,6 +160,12 @@ public class Networking : MonoBehaviour
                 int c1 = int.Parse(parseMsg[1]);
                 int r1 = int.Parse(parseMsg[2]);
                 OnTileClicked?.Invoke(c1, r1);
+
+                break;
+            case "TILE_LEFTANDRIGHTCLICKED":
+                int c3 = int.Parse(parseMsg[1]);
+                int r3 = int.Parse(parseMsg[2]);
+                OnTileLeftAndRightClicked?.Invoke(c3, r3);
 
                 break;
             case "TILE_RIGHTCLICKED":
@@ -222,13 +227,16 @@ public class Networking : MonoBehaviour
     public static void SendToServer(string msg)
     {
         msg += eom; //append EOM marker
-        print("Sent: " + msg);
+        if(!msg.Contains("PING"))
+            print("Sent: " + msg);
 
         try
         {
             if (websock)
             {
-                Send(msg); //use jslib send
+                //print("State Before Sending (Blocks if not 1): " + State());
+                if (State() == 1)
+                    Send(msg); //use jslib send
             }
             else
             {
@@ -243,7 +251,7 @@ public class Networking : MonoBehaviour
     }
     IEnumerator EnqueueTCPFromServerThread()
     {
-        Byte[] buffer = new Byte[1024];
+        Byte[] buffer = new Byte[4 * 1024];
         int inputBuffer;
         while (true)
         {
@@ -362,7 +370,8 @@ public class Networking : MonoBehaviour
                 {
                     case "JOINED_GAME":
                         gameId = int.Parse(parseMsg[1]);
-                        OnJoinedGame?.Invoke(gameId);
+                        int clientId = int.Parse(parseMsg[2]);
+                        OnJoinedGame?.Invoke(gameId, clientId);
 
                         break;
                     case "GAME_LIST":
