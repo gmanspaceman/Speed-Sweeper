@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +9,8 @@ public class ServerConnectionUIManager : MonoBehaviour
     public Button connectServer;
     public GameObject gameInfo;
     public Text ping;
+    public Text isConnected;
+    public Text nameInput;
 
     // Start is called before the first frame update
     private void Awake()
@@ -20,19 +21,27 @@ public class ServerConnectionUIManager : MonoBehaviour
         Networking.OnPingPong += UpdatePing;
     }
 
-    void Start()
-    {
-        
-    }
     public void UpdatePing(float f)
     {
         ping.text = "Ping: " + f + " ms";
     }
-
-    // Update is called once per frame
-    public void ServerConnected()
+    public void UpdateIAm()
     {
-        connectServer.interactable = false;
+        if (nameInput.text.Trim().Length > 0)
+        {
+            string msgKey = "I_AM";
+
+            string message = string.Join(",", msgKey, nameInput.text.Trim());
+
+            Networking.SendToServer(message);
+        }
+
+    }
+    // Update is called once per frame
+    public void ServerConnected(bool _isConnected)
+    {
+        connectServer.interactable = !_isConnected;
+        isConnected.text = _isConnected ? "Connected! :)" : "Disconnected! :(";
     }
     public void JoinedGameView(int gameId, int clientId)
     {

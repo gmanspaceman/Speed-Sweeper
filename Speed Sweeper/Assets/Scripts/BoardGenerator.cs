@@ -71,6 +71,7 @@ public class BoardGenerator : MonoBehaviour
         //if single player just call init
         initalizeGameState();
     }
+
     public void ServerSend_GetMidGame()
     {
         string msgKey = "MID_GAME";
@@ -86,6 +87,13 @@ public class BoardGenerator : MonoBehaviour
         g.gameId = id;
 
         g.UnPackMidGameBoardStateForServer(s);    
+    }
+
+    public void ServerSend_GetGameInfo()
+    {
+        string msgKey = "GAME_INFO";
+
+        Networking.SendToServer(msgKey);
     }
     public void UpdateGameInfo(string s)
     {
@@ -105,10 +113,11 @@ public class BoardGenerator : MonoBehaviour
 
         if (myTurnCount == 2)
             g.myTurn = true;
-        else
-            g.myTurn = false;
+        //else
+        //    g.myTurn = false;
 
     }
+
     public void ServerSend_MakeServerGame()
     {
         //Networking.OpenServerConnection();
@@ -120,41 +129,10 @@ public class BoardGenerator : MonoBehaviour
         myTurnCount = 2;
         g.myTurn = true;
     }
-    public void JoinedGame(int gameId, int _clientId)
-    {
-        g.gameId = gameId;
-        clientId = _clientId;
-        //gameUI.gameInfoManager.gameObject.SetActive(true);
-    }
-    public void ServerSend_GetGameList()
-    {
-        string msgKey = "GET_GAMES";
-        //joining mid game will need more work
-        //need to get copy of grid from host to populate
-
-        Networking.SendToServer(msgKey);
-    }
-    public void ServerSend_GetGameInfo()
-    {
-        string msgKey = "GAME_INFO";
-
-        Networking.SendToServer(msgKey);
-    }
-    public void GameList(Dictionary<int, int> gameList)
-    {
-        serverListControl.RemoveAllServerButton();
-        //Display the game list so user can choose what to join
-        foreach (KeyValuePair<int, int> k in gameList)
-        {
-            print("Game " + k.Key + " has " + k.Value + " players.");
-            serverListControl.AddServerButton(k.Key.ToString(), k.Value);
-        }
-
-    }
     public void ServerSend_JoinGame(int gameId)
     {
         //Send this to a server
-        string msgKey = "JOIN_GAME"; 
+        string msgKey = "JOIN_GAME";
         //joining mid game will need more work
         //need to get copy of grid from host to populate
 
@@ -165,6 +143,32 @@ public class BoardGenerator : MonoBehaviour
         myTurnCount = 0;
         g.myTurn = false;
     }
+    public void JoinedGame(int gameId, int _clientId)
+    {
+        g.gameId = gameId;
+        clientId = _clientId;
+        //gameUI.gameInfoManager.gameObject.SetActive(true);
+    }
+
+    public void ServerSend_GetGameList(bool isConnected)
+    {
+        string msgKey = "GET_GAMES";
+        //joining mid game will need more work
+        //need to get copy of grid from host to populate
+        if(isConnected)
+            Networking.SendToServer(msgKey);
+    }
+    public void GameList(Dictionary<int, int> gameList)
+    {
+        serverListControl.RemoveAllServerButton();
+        //Display the game list so user can choose what to join
+        foreach (KeyValuePair<int, int> k in gameList)
+        {
+            print("Game " + k.Key + " has " + k.Value + " players.");
+            serverListControl.AddServerButton(k.Key.ToString(), k.Value);
+        }
+    }
+
     public void ServerSend_StartServerGame()
     {
         string msgKey = "START_GAME";   //build the board and then send this
@@ -399,29 +403,30 @@ public class BoardGenerator : MonoBehaviour
                 }
                 else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f)
                 {
-                    TileWasRightAndLeftClicked(t);
-
                     if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
-                        ServerSend_LeftAndRightClickTile(t);
+                        ServerSend_LeftAndRightClickTile(t); 
+                    
+                    TileWasRightAndLeftClicked(t);
                 }
                 else if (Input.GetMouseButtonUp(0))
                 {
                     if (t.tileState != Tile.TileState.Opened)
                     {
-                        TileWasClicked(t);
-
                         if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
                             ServerSend_ClickTile(t);
+
+                        TileWasClicked(t);
+
                     }
                 }
                 else if (Input.GetMouseButtonUp(1))
                 {
                     if (t.tileState != Tile.TileState.Opened)
                     {
-                        TileWasRightClicked(t);
-
                         if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
                             ServerSend_RightClickTile(t, t.tileState);
+
+                        TileWasRightClicked(t);
                     }
                 }
             }

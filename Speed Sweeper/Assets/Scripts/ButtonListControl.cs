@@ -7,19 +7,6 @@ public class ButtonListControl : MonoBehaviour
     private GameObject buttonTemplate;
     public BoardGenerator boardGen;
 
-    void Start()
-    {    
-        for (int i = 0; i < 20; i++)
-        {
-            //GameObject button = Instantiate(buttonTemplate);
-            //button.SetActive(true);
-
-            //button.GetComponent<ButtonListButton>().SetText("Button #" + i);
-
-            //button.transform.SetParent(buttonTemplate.transform.parent, false);
-        }
-    }
-
     public void AddServerButton(string s, int players)
     {
         GameObject button = Instantiate(buttonTemplate);

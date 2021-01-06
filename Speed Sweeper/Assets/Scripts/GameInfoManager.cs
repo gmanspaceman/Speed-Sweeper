@@ -7,15 +7,12 @@ public class GameInfoManager : MonoBehaviour
     public Text numPlayer;
     public Text currPlayerTurn;
 
-    
-
     void Start()
     {
         //Networking.OnJoinedGame += ShowGameInfo;
         //BoardGenerator.OnDroppingGame += HideGameInfo;
         Networking.OnGameInfo += UpdateGameInfo;
     }
-
     public void UpdateGameInfo(string s)
     {
         string[] data = s.Split(',');
@@ -28,5 +25,4 @@ public class GameInfoManager : MonoBehaviour
         numPlayer.text = "Number of Players: " + _NumberOfPlayers;
         currPlayerTurn.text = "Current Player Turn: " + _CurrentPlayerTurn;
     }
-
 }
