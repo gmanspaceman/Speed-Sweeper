@@ -76,10 +76,8 @@ public class Networking : MonoBehaviour
 #if UNITY_WEBGL
         StartCoroutine("OpenWebSocketServerConnection");
 #else
-        StartCoroutine("OpenWebSocketServerConnection");
-#endif
-
         StartCoroutine("OpenTCPServerConnection");
+#endif
 
         pingPong = new Stopwatch();
         StartCoroutine("PingServer");
@@ -107,8 +105,9 @@ public class Networking : MonoBehaviour
             //OnTCPServerConnected?.Invoke(false);
             yield return new WaitForSeconds(1);
         }
-        OnTCPServerConnected?.Invoke(true);
         StartCoroutine("EnqueueTCPFromServerThread");
+        OnTCPServerConnected?.Invoke(true);
+        
     }
     IEnumerator OpenWebSocketServerConnection()
     {
