@@ -20,9 +20,10 @@ public class GameInfoManager : MonoBehaviour
         string _gameId = data[1];
         string _NumberOfPlayers = data[2];
         string _CurrentPlayerTurn = data[3];
+        string _CurrentPlayerTurnName = data[4];
 
         gameId.text = "Game Id: " + _gameId;
         numPlayer.text = "Number of Players: " + _NumberOfPlayers;
-        currPlayerTurn.text = "Current Player Turn: " + _CurrentPlayerTurn;
+        currPlayerTurn.text = "Current Player Turn: " + _CurrentPlayerTurnName;
     }
 }

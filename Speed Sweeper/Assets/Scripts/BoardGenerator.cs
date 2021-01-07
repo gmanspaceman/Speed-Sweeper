@@ -57,8 +57,9 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnRestart += Restart;
         Networking.OnGetMidGame += ServerSend_GetMidGame;
         Networking.OnMidGame += MidGame;
-        Networking.OnTCPServerConnected += ServerSend_GetGameList;
-        Networking.OnWebSocketServerConnected += ServerSend_GetGameList;
+        //Networking.OnTCPServerConnected += ServerSend_GetGameList;
+        //Networking.OnWebSocketServerConnected += ServerSend_GetGameList;
+        Networking.OnServerConnected += ServerSend_GetGameList;
         Networking.OnGameInfo += UpdateGameInfo;
 
         OnEndGame += ServerSend_EndGame;
@@ -101,6 +102,7 @@ public class BoardGenerator : MonoBehaviour
         string _gameId = data[1];
         string _NumberOfPlayers = data[2];
         string _CurrentPlayerTurn = data[3];
+        string _CurrentPlayerTurnName = data[4];
 
         //literalyl just here to fix turn desyn issue
         //maybe im not getting yourturn packet

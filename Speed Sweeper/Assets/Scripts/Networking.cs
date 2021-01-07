@@ -8,8 +8,9 @@ using System.Runtime.InteropServices;
 
 public class Networking : MonoBehaviour
 {
-    public static event Action<bool> OnTCPServerConnected;
-    public static event Action<bool> OnWebSocketServerConnected;
+    //public static event Action<bool> OnTCPServerConnected;
+    //public static event Action<bool> OnWebSocketServerConnected;
+    public static event Action<bool> OnServerConnected;
     public static event Action OnWaitTurn;
     public static event Action<float> OnPingPong;
     public static event Action OnGetMidGame;
@@ -62,8 +63,9 @@ public class Networking : MonoBehaviour
 
     void Start()
     {
-        OnTCPServerConnected?.Invoke(false);
-        OnWebSocketServerConnected?.Invoke(false);
+        //OnTCPServerConnected?.Invoke(false);
+        //OnWebSocketServerConnected?.Invoke(false);
+        OnServerConnected?.Invoke(false);
         Connect();
     }
     public void Reconnect()
@@ -81,6 +83,7 @@ public class Networking : MonoBehaviour
 
         pingPong = new Stopwatch();
         StartCoroutine("PingServer");
+        StartCoroutine("DispatchQueueFromServer");
     }
     public void Disconnect()
     {
@@ -93,21 +96,24 @@ public class Networking : MonoBehaviour
         _stream.Close();
         _tcpClient.Close();
 #endif
-        OnTCPServerConnected?.Invoke(false);
-        OnWebSocketServerConnected?.Invoke(false);
+        //OnTCPServerConnected?.Invoke(false);
+        //OnWebSocketServerConnected?.Invoke(false);
+        OnServerConnected?.Invoke(false);
+        
     }
     IEnumerator OpenTCPServerConnection()
     {
         _tcpClient = new TcpClient(ipAddr, port);
         _stream = _tcpClient.GetStream();
-        if(_tcpClient.Connected)
+        if(!_tcpClient.Connected)
         {
             //OnTCPServerConnected?.Invoke(false);
             yield return new WaitForSeconds(1);
         }
         StartCoroutine("EnqueueTCPFromServerThread");
-        OnTCPServerConnected?.Invoke(true);
-        
+        //OnTCPServerConnected?.Invoke(true);
+        OnServerConnected?.Invoke(true);
+        isConnected = true;
     }
     IEnumerator OpenWebSocketServerConnection()
     {
@@ -117,7 +123,9 @@ public class Networking : MonoBehaviour
             //OnWebSocketServerConnected?.Invoke(false);
             yield return new WaitForSeconds(1); //wait till it connects before throwing the event
         }
-        OnWebSocketServerConnected?.Invoke(true);
+        //OnWebSocketServerConnected?.Invoke(true);
+        OnServerConnected?.Invoke(true);
+        isConnected = true;
         //enqueing happens in jslib
     }
     IEnumerator DispatchQueueFromServer()
@@ -223,10 +231,20 @@ public class Networking : MonoBehaviour
         {
             Networking.SendToServer("PING");
             yield return new WaitForSeconds(1);
-            if (pingPong.ElapsedMilliseconds < 5000)
+            if (pingPong.ElapsedMilliseconds < 5000 && !isConnected)
+            {
                 isConnected = true;
-            if (pingPong.ElapsedMilliseconds > 5000)
+                //OnTCPServerConnected?.Invoke(true);
+                //OnWebSocketServerConnected?.Invoke(true);
+                OnServerConnected?.Invoke(true);
+            }
+            if (pingPong.ElapsedMilliseconds > 5000 && isConnected)
+            {
                 isConnected = false;
+                //OnTCPServerConnected?.Invoke(false);
+                //OnWebSocketServerConnected?.Invoke(false);
+                OnServerConnected?.Invoke(false);
+            }
         }
     }
     public static void SendToServer(string msg)
