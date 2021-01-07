@@ -352,13 +352,17 @@ public class BoardGenerator : MonoBehaviour
         if (!g.myTurn && g.gameId != -1)
             return;
 
-        
 
         //User Input
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
         {
             Vector3 v = Input.mousePosition;
-            Tile t = GetTileClicked(v);
+            bool found;
+            Tile t = GetTileClicked(v, out found);
+
+            if (!found)
+                return;
+
             string msgKey;
 
             if (g.gamePhase == GameState.GamePhase.PreGame)
@@ -454,7 +458,11 @@ public class BoardGenerator : MonoBehaviour
             if (g.gamePhase != GameState.GamePhase.Win && g.gamePhase != GameState.GamePhase.Lose)
             {
                 Vector3 v = Input.mousePosition;
-                Tile t = GetTileClicked(v);
+                bool found;
+                Tile t = GetTileClicked(v, out found);
+
+                if (!found)
+                    return;
 
                 //unclick everythign that shouldnt be clicked
                 for (int c = 0; c < Columns; c++)
@@ -498,7 +506,7 @@ public class BoardGenerator : MonoBehaviour
             }
         }
     }
-    public Tile GetTileClicked(Vector3 v)
+    public Tile GetTileClicked(Vector3 v, out bool found)
     {
         Ray ray = Camera.main.ScreenPointToRay(v);
         RaycastHit hit;
@@ -512,6 +520,7 @@ public class BoardGenerator : MonoBehaviour
             //    gameUI.toggleMenu();
             //    return null;
             //}
+            found = false;
             return null;
         }
             
@@ -523,11 +532,12 @@ public class BoardGenerator : MonoBehaviour
             { 
                 if (g.board[coord.x, coord.y].T.gameObject == hit.transform.gameObject)
                 {
+                    found = true;
                     return g.board[coord.x, coord.y];
                 }
             }
         }
-
+        found = false;
         return null;
     }
 
