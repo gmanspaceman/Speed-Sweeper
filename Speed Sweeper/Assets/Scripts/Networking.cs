@@ -218,7 +218,7 @@ public class Networking : MonoBehaviour
             case "PONG":
                 
                 OnPingPong?.Invoke(pingPong.ElapsedMilliseconds);
-                pingPong.Restart();
+                pingPong.Reset();
                 break;
             default:
 
@@ -229,8 +229,10 @@ public class Networking : MonoBehaviour
     {
         while (true)
         {
-            Networking.SendToServer("PING");
             yield return new WaitForSeconds(1);
+            pingPong.Restart();
+            Networking.SendToServer("PING");
+            
             if (pingPong.ElapsedMilliseconds < 5000 && !isConnected)
             {
                 isConnected = true;

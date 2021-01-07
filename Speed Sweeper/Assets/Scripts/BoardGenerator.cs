@@ -409,10 +409,43 @@ public class BoardGenerator : MonoBehaviour
                 }
                 else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f)
                 {
-                    if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
-                        ServerSend_LeftAndRightClickTile(t); 
-                    
-                    TileWasRightAndLeftClicked(t);
+                    bool leftandrigthwilldosomething = false;
+
+
+
+                    //add the following here temporarily 
+                    //put it somewhere better
+                    int numNeighborFlags = 0;
+                    foreach (Vector2Int vt in t.neighbors)
+                    {
+                        if (g.board[vt.x, vt.y].tileState == Tile.TileState.Flagged)
+                        {
+                            numNeighborFlags++;
+                        }
+                    }
+                    if (t.numberOfBombNeighbors == numNeighborFlags)
+                    {
+                        foreach (Vector2Int vtt in t.neighbors)
+                        {
+                            //open all the unflagged neihgrs and evaluate 
+                            if (g.board[vtt.x, vtt.y].tileState != Tile.TileState.Flagged &&
+                                g.board[vtt.x, vtt.y].tileState != Tile.TileState.Opened)
+                            {
+                                leftandrigthwilldosomething = true;
+                            }
+                        }
+                    }
+
+
+
+
+                    if (leftandrigthwilldosomething)
+                    {
+                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                            ServerSend_LeftAndRightClickTile(t);
+
+                        TileWasRightAndLeftClicked(t);
+                    }
                 }
                 else if (Input.GetMouseButtonUp(0))
                 {
