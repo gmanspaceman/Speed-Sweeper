@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,16 +48,17 @@ public class BoardGenerator : MonoBehaviour
     private void Awake()
     {
         Networking.OnJoinedGame += JoinedGame;
-        Networking.OnGridRecieve += GridRecieve;
-        Networking.OnTileClicked += TileClicked;
-        Networking.OnTileRightClicked += TileRightClicked;
-        Networking.OnTileLeftAndRightClicked += TileLeftAndRightClicked;
+        //Networking.OnGridRecieve += GridRecieve;
+        //Networking.OnTileClicked += TileClicked;
+        //Networking.OnTileRightClicked += TileRightClicked;
+        //Networking.OnTileLeftAndRightClicked += TileLeftAndRightClicked;
         Networking.OnGameList += GameList;
-        Networking.OnWaitTurn += WaitTurn;
-        Networking.OnYourTurn += YourTurn;
+       // Networking.OnWaitTurn += WaitTurn;
+        Networking.OnGameUpdate += GameUpdate;
+        //Networking.OnYourTurn += YourTurn;
         Networking.OnRestart += Restart;
-        Networking.OnGetMidGame += ServerSend_GetMidGame;
-        Networking.OnMidGame += MidGame;
+        //Networking.OnGetMidGame += ServerSend_GetMidGame;
+        //Networking.OnMidGame += MidGame;
         //Networking.OnTCPServerConnected += ServerSend_GetGameList;
         //Networking.OnWebSocketServerConnected += ServerSend_GetGameList;
         Networking.OnServerConnected += ServerSend_GetGameList;
@@ -73,22 +75,22 @@ public class BoardGenerator : MonoBehaviour
         initalizeGameState();
     }
 
-    public void ServerSend_GetMidGame()
-    {
-        string msgKey = "MID_GAME";
-        Networking.SendToServer(g.PackMidGameBoardStateForServer(msgKey));
-    }
-    public void MidGame(string s)
-    {
-        float id = g.gameId;
+    //public void ServerSend_GetMidGame()
+    //{
+    //    string msgKey = "MID_GAME";
+    //    Networking.SendToServer(g.PackMidGameBoardStateForServer(msgKey));
+    //}
+    //public void MidGame(string s)
+    //{
+    //    float id = g.gameId;
 
-        //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
-        initalizeGameState();
+    //    //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+    //    initalizeGameState();
 
-        g.gameId = id;
+    //    g.gameId = id;
 
-        g.UnPackMidGameBoardStateForServer(s);    
-    }
+    //    g.UnPackMidGameBoardStateForServer(s);
+    //}
 
     public void ServerSend_GetGameInfo()
     {
@@ -104,19 +106,19 @@ public class BoardGenerator : MonoBehaviour
         string _CurrentPlayerTurn = data[3];
         string _CurrentPlayerTurnName = data[4];
 
-        //literalyl just here to fix turn desyn issue
-        //maybe im not getting yourturn packet
-        if (clientId == int.Parse(_CurrentPlayerTurn))
-            myTurnCount++;
-        else
-            myTurnCount = 0;
-
-        myTurnCount = myTurnCount > 2 ? 2 : myTurnCount;
-
-        if (myTurnCount == 2)
-            g.myTurn = true;
+        ////literalyl just here to fix turn desyn issue
+        ////maybe im not getting yourturn packet
+        //if (clientId == int.Parse(_CurrentPlayerTurn))
+        //    myTurnCount++;
         //else
-        //    g.myTurn = false;
+        //    myTurnCount = 0;
+
+        //myTurnCount = myTurnCount > 2 ? 2 : myTurnCount;
+
+        //if (myTurnCount == 2)
+        //    g.myTurn = true;
+        ////else
+        ////    g.myTurn = false;
 
     }
 
@@ -145,13 +147,43 @@ public class BoardGenerator : MonoBehaviour
         myTurnCount = 0;
         g.myTurn = false;
     }
-    public void JoinedGame(int gameId, int _clientId)
+    public void JoinedGame(int _gameState, int _CurrentTurnId, int _gameId, string[] _raw)
     {
-        g.gameId = gameId;
-        clientId = _clientId;
+        //g.gameId = gameId;
+        if (_gameState == 1)
+        {
+            string[] gameUpdate = _raw.Skip(3).ToArray();
+            string currentGameState = String.Join("", gameUpdate);
+            currentGameState = "GAME_UPDATE," + currentGameState;
+            //this should not be just the GAME_UPDATE message
+            GameUpdate(currentGameState);
+        }
+        else
+        {
+            Restart(_gameId); //i guess restart, maybe i want to actualyl show a finished game
+        }
+        //clientId = _clientId; //THIS WSANT CHANGE ON SERVER TO BE GAMESTATE
         //gameUI.gameInfoManager.gameObject.SetActive(true);
     }
+    public void GameUpdate(string gameUpdate)
+    {
+        string[] update = gameUpdate.Split(',');
+        string currentPlayerTurn = update[1];
 
+        string gameState = String.Join("", update.Skip(2));
+        g.UnPackMidGameBoardStateForServer(gameState);
+
+        if (int.Parse(currentPlayerTurn) == clientId)
+            g.myTurn = true;
+        else
+            g.myTurn = false;
+    }
+    public void ServerSend_Move()
+    {
+        g.myTurn = false;
+        Networking.SendToServer("MOVE," + g.PackMidGameBoardStateForServer("MID_GAME"));
+        
+    }
     public void ServerSend_GetGameList(bool isConnected)
     {
         string msgKey = "GET_GAMES";
@@ -171,87 +203,87 @@ public class BoardGenerator : MonoBehaviour
         }
     }
 
-    public void ServerSend_StartServerGame()
-    {
-        string msgKey = "START_GAME";   //build the board and then send this
-        Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
+    //public void ServerSend_StartServerGame()
+    //{
+    //    string msgKey = "START_GAME";   //build the board and then send this
+    //    Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
 
-        myTurnCount = 0;
-        g.myTurn = false;
-        //g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
-    }
-    public void GridRecieve(string s)
-    {
+    //    myTurnCount = 0;
+    //    g.myTurn = false;
+    //    //g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
+    //}
+    //public void GridRecieve(string s)
+    //{
 
-        //other person started the game
-        //populate your board too
-        PopulateBombs(g, s);
+    //    //other person started the game
+    //    //populate your board too
+    //    PopulateBombs(g, s);
 
-        //I think what is happenis 
-        //tje board already has it open so it doesn
-        //trip update game barod logic;
-        //g.gamePhase = GameState.GamePhase.Playing;
-        g.UpdateGameState();
-    }
-    public void ServerSend_ClickTile(Tile t)
-    {
-        string msgKey = "TILE_CLICKED";
+    //    //I think what is happenis 
+    //    //tje board already has it open so it doesn
+    //    //trip update game barod logic;
+    //    //g.gamePhase = GameState.GamePhase.Playing;
+    //    g.UpdateGameState();
+    //}
+    //public void ServerSend_ClickTile(Tile t)
+    //{
+    //    string msgKey = "TILE_CLICKED";
 
-        string msg = string.Join(",", msgKey, t.c_position, t.r_position);
-        Networking.SendToServer(msg);
+    //    string msg = string.Join(",", msgKey, t.c_position, t.r_position);
+    //    Networking.SendToServer(msg);
 
-        myTurnCount = 0;
-        g.myTurn = false; // only allow 1 move
-    }
-    public void ServerSend_LeftAndRightClickTile(Tile t)
-    {
-        string msgKey = "TILE_LEFTANDRIGHTCLICKED";
+    //    myTurnCount = 0;
+    //    g.myTurn = false; // only allow 1 move
+    //}
+    //public void ServerSend_LeftAndRightClickTile(Tile t)
+    //{
+    //    string msgKey = "TILE_LEFTANDRIGHTCLICKED";
 
-        string msg = string.Join(",", msgKey, t.c_position, t.r_position);
-        Networking.SendToServer(msg);
+    //    string msg = string.Join(",", msgKey, t.c_position, t.r_position);
+    //    Networking.SendToServer(msg);
 
-        myTurnCount = 0;
-        g.myTurn = false; // only allow 1 move
-    }
-    public void ServerSend_RightClickTile(Tile t, Tile.TileState state)
-    {
-        string msgKey = "TILE_RIGHTCLICKED";
+    //    myTurnCount = 0;
+    //    g.myTurn = false; // only allow 1 move
+    //}
+    //public void ServerSend_RightClickTile(Tile t, Tile.TileState state)
+    //{
+    //    string msgKey = "TILE_RIGHTCLICKED";
 
-        string stt = "2";
-        if (state == Tile.TileState.Flagged)
-            stt = "1";
-        else if (state == Tile.TileState.Unmarked)
-            stt = "0";
+    //    string stt = "2";
+    //    if (state == Tile.TileState.Flagged)
+    //        stt = "1";
+    //    else if (state == Tile.TileState.Unmarked)
+    //        stt = "0";
 
-        string msg = string.Join(",", msgKey, t.c_position, t.r_position, stt);
-        Networking.SendToServer(msg);
-    }
-    public void TileClicked(int c, int r)
-    {
-        TileWasClicked(g.board[c,r]);
-    }
-    public void TileLeftAndRightClicked(int c, int r)
-    {
-        TileWasRightAndLeftClicked(g.board[c, r]);
-    }
-    public void TileRightClicked(int c, int r, int st)
-    {
-        if ((st == 0 && g.board[c, r].tileState == Tile.TileState.Flagged) ||
-            (st == 1 && g.board[c, r].tileState == Tile.TileState.Unmarked))
-        { 
-            TileWasRightClicked(g.board[c, r]); 
-        }
-        //if st ==2 somethign is wrong      
-    }
-    public void WaitTurn()
-    {
-        myTurnCount = 0;
-        g.myTurn = false;
-    }
-    public void YourTurn()
-    {
-        g.myTurn = true;
-    }
+    //    string msg = string.Join(",", msgKey, t.c_position, t.r_position, stt);
+    //    Networking.SendToServer(msg);
+    //}
+    //public void TileClicked(int c, int r)
+    //{
+    //    TileWasClicked(g.board[c,r]);
+    //}
+    //public void TileLeftAndRightClicked(int c, int r)
+    //{
+    //    TileWasRightAndLeftClicked(g.board[c, r]);
+    //}
+    //public void TileRightClicked(int c, int r, int st)
+    //{
+    //    if ((st == 0 && g.board[c, r].tileState == Tile.TileState.Flagged) ||
+    //        (st == 1 && g.board[c, r].tileState == Tile.TileState.Unmarked))
+    //    { 
+    //        TileWasRightClicked(g.board[c, r]); 
+    //    }
+    //    //if st ==2 somethign is wrong      
+    //}
+    //public void WaitTurn()
+    //{
+    //    myTurnCount = 0;
+    //    g.myTurn = false;
+    //}
+    //public void YourTurn()
+    //{
+    //    g.myTurn = true;
+    //}
     public void ServerSend_EndGame()
     {
         if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
@@ -264,20 +296,24 @@ public class BoardGenerator : MonoBehaviour
             //g.gameId = -1; //okay so comenting this out then doesnt lock out game in udpate
         }
     }
-    public void Restart()
+    public void Restart(int gameid, int clientTurnId)
     {
-        float id = g.gameId;
+       //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+        initalizeGameState(gameid);
 
-        //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
-        initalizeGameState();
-
-        if (g.gameType == GameState.GameType.Multiplayer && id != -1)
+        if (g.gameType == GameState.GameType.Multiplayer && gameid != -1)
         {
-            g.gameId = id;
             //i think i can do pregame here
             g.gamePhase = GameState.GamePhase.PreGame;
 
-            WaitTurn();
+            if (clientTurnId == clientId)
+                g.myTurn = true;
+            else
+                g.myTurn = false;
+        }
+        else
+        {
+            g.myTurn = true;
         }
 
         
@@ -301,7 +337,7 @@ public class BoardGenerator : MonoBehaviour
         g.gameId = -1;
     }
 
-    public void initalizeGameState()
+    public void initalizeGameState(int _gameId = -1)
     {
         gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
@@ -309,6 +345,8 @@ public class BoardGenerator : MonoBehaviour
         mouse2Time = 0f;
 
         g = new GameState(Columns, Rows, numberOfMines);
+
+        g.gameId = _gameId;
 
         buildGameBoard(g); // builds game with no bombs nothing showing
                            //gamestate has the right size but no bombs
@@ -374,9 +412,12 @@ public class BoardGenerator : MonoBehaviour
                     //buildGameBoard(g); //building new game
                     PopulateBombs(g, t);
 
-                    if(g.gameType == GameState.GameType.Multiplayer &&
-                        g.gameId != -1)
-                        ServerSend_StartServerGame();
+                    //if(g.gameType == GameState.GameType.Multiplayer &&
+                    //    g.gameId != -1)
+                    //    ServerSend_StartServerGame();
+
+                    if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                        ServerSend_Move();
 
                 }
             }
@@ -385,11 +426,12 @@ public class BoardGenerator : MonoBehaviour
             {
                 if (Input.GetMouseButtonUp(0))
                 {
-                    Restart();
+                    //Restart(); //commented out to test havint the server dictact all gamestates
 
-                    if (g.gameType == GameState.GameType.Multiplayer &&
-                        g.gameId != -1)
+                    if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
                         ServerSend_RestartGame();
+                    else
+                        Restart((int)g.gameId, clientId);
                     
                     return;
                 }
@@ -441,20 +483,26 @@ public class BoardGenerator : MonoBehaviour
 
                     if (leftandrigthwilldosomething)
                     {
-                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
-                            ServerSend_LeftAndRightClickTile(t);
+                        //if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                        //    ServerSend_LeftAndRightClickTile(t);
 
                         TileWasRightAndLeftClicked(t);
+
+                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                            ServerSend_Move();
                     }
                 }
                 else if (Input.GetMouseButtonUp(0))
                 {
                     if (t.tileState != Tile.TileState.Opened)
                     {
-                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
-                            ServerSend_ClickTile(t);
+                        //if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                        //    ServerSend_ClickTile(t);
 
                         TileWasClicked(t);
+
+                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                            ServerSend_Move();
 
                     }
                 }
@@ -462,10 +510,13 @@ public class BoardGenerator : MonoBehaviour
                 {
                     if (t.tileState != Tile.TileState.Opened)
                     {
-                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
-                            ServerSend_RightClickTile(t, t.tileState);
+                        //if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                        //    ServerSend_RightClickTile(t, t.tileState);
 
                         TileWasRightClicked(t);
+
+                        if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
+                            ServerSend_Move();
                     }
                 }
             }

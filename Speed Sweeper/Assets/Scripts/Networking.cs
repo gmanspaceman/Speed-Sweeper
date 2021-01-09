@@ -11,17 +11,18 @@ public class Networking : MonoBehaviour
     //public static event Action<bool> OnTCPServerConnected;
     //public static event Action<bool> OnWebSocketServerConnected;
     public static event Action<bool> OnServerConnected;
-    public static event Action OnWaitTurn;
+    //public static event Action OnWaitTurn;
     public static event Action<float> OnPingPong;
-    public static event Action OnGetMidGame;
-    public static event Action<string> OnMidGame;
-    public static event Action OnYourTurn;
-    public static event Action OnRestart;
-    public static event Action<int, int> OnJoinedGame;
-    public static event Action<int,int> OnTileClicked;
-    public static event Action<int,int, int> OnTileRightClicked;
-    public static event Action<int,int> OnTileLeftAndRightClicked;
-    public static event Action<string> OnGridRecieve;
+    //public static event Action OnGetMidGame;
+    //public static event Action<string> OnMidGame;
+    public static event Action<string> OnGameUpdate;
+    //public static event Action OnYourTurn;
+    public static event Action<int, int> OnRestart;
+    public static event Action<int, int, int, string[]> OnJoinedGame;
+    //public static event Action<int,int> OnTileClicked;
+    //public static event Action<int,int, int> OnTileRightClicked;
+    //public static event Action<int,int> OnTileLeftAndRightClicked;
+    //public static event Action<string> OnGridRecieve;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
 
@@ -149,11 +150,16 @@ public class Networking : MonoBehaviour
         int gameId = -1;
         switch (msgKey)
         {
+            case "GAME_UPDATE":
+
+                OnGameUpdate?.Invoke(msg);
+                break;
             case "JOINED_GAME":
-                gameId = int.Parse(parseMsg[1]);
-                int clientId = int.Parse(parseMsg[2]);
-                
-                OnJoinedGame?.Invoke(gameId, clientId);
+                int gameState = int.Parse(parseMsg[1]);
+                int currentTurnId = int.Parse(parseMsg[2]);
+                gameId = int.Parse(parseMsg[3]);
+
+                OnJoinedGame?.Invoke(gameState, currentTurnId, gameId, parseMsg);
                 break;
             case "GAME_LIST":
                 Dictionary<int, int> gameList = new Dictionary<int, int>();
@@ -168,53 +174,54 @@ public class Networking : MonoBehaviour
 
                 OnGameList?.Invoke(gameList);
                 break;
-            case "TILE_CLICKED":
-                int c1 = int.Parse(parseMsg[1]);
-                int r1 = int.Parse(parseMsg[2]);
+            //case "TILE_CLICKED":
+            //    int c1 = int.Parse(parseMsg[1]);
+            //    int r1 = int.Parse(parseMsg[2]);
                 
-                OnTileClicked?.Invoke(c1, r1);
-                break;
-            case "TILE_LEFTANDRIGHTCLICKED":
-                int c3 = int.Parse(parseMsg[1]);
-                int r3 = int.Parse(parseMsg[2]);
+            //    OnTileClicked?.Invoke(c1, r1);
+            //    break;
+            //case "TILE_LEFTANDRIGHTCLICKED":
+            //    int c3 = int.Parse(parseMsg[1]);
+            //    int r3 = int.Parse(parseMsg[2]);
                 
-                OnTileLeftAndRightClicked?.Invoke(c3, r3);
-                break;
-            case "TILE_RIGHTCLICKED":
-                int c2 = int.Parse(parseMsg[1]);
-                int r2 = int.Parse(parseMsg[2]);
-                int st = int.Parse(parseMsg[3]);
+            //    OnTileLeftAndRightClicked?.Invoke(c3, r3);
+            //    break;
+            //case "TILE_RIGHTCLICKED":
+            //    int c2 = int.Parse(parseMsg[1]);
+            //    int r2 = int.Parse(parseMsg[2]);
+            //    int st = int.Parse(parseMsg[3]);
                 
-                OnTileRightClicked?.Invoke(c2, r2, st);
-                break;
-            case "START_GAME":
+            //    OnTileRightClicked?.Invoke(c2, r2, st);
+            //    break;
+            //case "START_GAME":
                 
-                OnGridRecieve?.Invoke(msg.Replace("START_GAME,", ""));
-                break;
+            //    OnGridRecieve?.Invoke(msg.Replace("START_GAME,", ""));
+            //    break;
             case "RESTART":
-                
-                OnRestart?.Invoke();
+                gameId = int.Parse(parseMsg[1]);
+                int clientId = int.Parse(parseMsg[2]);
+                OnRestart?.Invoke(gameId, clientId);
                 break;
-            case "WAIT_TURN":
+            //case "WAIT_TURN":
                 
-                OnWaitTurn?.Invoke();
-                break;
-            case "GET_MIDGAME":
+            //    OnWaitTurn?.Invoke();
+            //    break;
+            //case "GET_MIDGAME":
                 
-                OnGetMidGame?.Invoke();
-                break;
-            case "MID_GAME":
+            //    OnGetMidGame?.Invoke();
+            //    break;
+            //case "MID_GAME":
                 
-                OnMidGame?.Invoke(msg);
-                break;
+            //    OnMidGame?.Invoke(msg);
+            //    break;
             case "GAME_INFO":
                 
                 OnGameInfo?.Invoke(msg);
                 break;
-            case "YOUR_TURN":
+            //case "YOUR_TURN":
                 
-                OnYourTurn?.Invoke();
-                break;
+            //    OnYourTurn?.Invoke();
+            //    break;
             case "PONG":
                 
                 OnPingPong?.Invoke(pingPong.ElapsedMilliseconds);
