@@ -13,6 +13,7 @@ public class Networking : MonoBehaviour
     public static event Action<bool> OnServerConnected;
     //public static event Action OnWaitTurn;
     public static event Action<float> OnPingPong;
+    public static event Action<int> OnHello;
     //public static event Action OnGetMidGame;
     //public static event Action<string> OnMidGame;
     public static event Action<string> OnGameUpdate;
@@ -153,6 +154,10 @@ public class Networking : MonoBehaviour
             case "GAME_UPDATE":
 
                 OnGameUpdate?.Invoke(msg);
+                break;
+            case "HELLO":
+                int id = int.Parse(parseMsg[1]);
+                OnHello?.Invoke(id);
                 break;
             case "JOINED_GAME":
                 int gameState = int.Parse(parseMsg[1]);

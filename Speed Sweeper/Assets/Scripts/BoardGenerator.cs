@@ -55,6 +55,7 @@ public class BoardGenerator : MonoBehaviour
         Networking.OnGameList += GameList;
        // Networking.OnWaitTurn += WaitTurn;
         Networking.OnGameUpdate += GameUpdate;
+        Networking.OnHello += Hello;
         //Networking.OnYourTurn += YourTurn;
         Networking.OnRestart += Restart;
         //Networking.OnGetMidGame += ServerSend_GetMidGame;
@@ -62,6 +63,7 @@ public class BoardGenerator : MonoBehaviour
         //Networking.OnTCPServerConnected += ServerSend_GetGameList;
         //Networking.OnWebSocketServerConnected += ServerSend_GetGameList;
         Networking.OnServerConnected += ServerSend_GetGameList;
+        Networking.OnServerConnected += ServerSend_WHOAMI;
         Networking.OnGameInfo += UpdateGameInfo;
 
         OnEndGame += ServerSend_EndGame;
@@ -97,6 +99,17 @@ public class BoardGenerator : MonoBehaviour
         string msgKey = "GAME_INFO";
 
         Networking.SendToServer(msgKey);
+    }
+    public void ServerSend_WHOAMI(bool isConnected)
+    {
+        string msgKey = "WHOAMI";
+
+        if(isConnected)
+            Networking.SendToServer(msgKey);
+    }
+    public void Hello(int id)
+    {
+        clientId = id;
     }
     public void UpdateGameInfo(string s)
     {
@@ -160,7 +173,8 @@ public class BoardGenerator : MonoBehaviour
         }
         else
         {
-            Restart(_gameId); //i guess restart, maybe i want to actualyl show a finished game
+            Restart(_gameId, _CurrentTurnId); //i guess restart, maybe i want to actualyl show a finished game
+                                                //or not do anything on a new game(prob nbot)
         }
         //clientId = _clientId; //THIS WSANT CHANGE ON SERVER TO BE GAMESTATE
         //gameUI.gameInfoManager.gameObject.SetActive(true);
