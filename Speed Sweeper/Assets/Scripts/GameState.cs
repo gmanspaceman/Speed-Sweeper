@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using TMPro;
 using UnityEngine;
 
 [Serializable]
@@ -111,6 +105,7 @@ public class GameState : MonoBehaviour
     }
     public void UnPackMidGameBoardStateForServer(string s)
     {
+       
         string[] b = s.Split(',');
 
         int tileCount = 0;
@@ -142,15 +137,11 @@ public class GameState : MonoBehaviour
                 if (board[c, r].isStart)
                     board[c, r].makeStart();
 
-                board[c, r].UpdateTile();
+                    board[c, r].UpdateTile();
             }
         }
 
-        
-
         UpdateGameState();
-
-
     }
 
     public string SerializeInitBoardForServer(string msgKey)

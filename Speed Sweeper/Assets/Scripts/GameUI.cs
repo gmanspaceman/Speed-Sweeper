@@ -44,7 +44,7 @@ public class GameUI : MonoBehaviour
     }
     public void UpdateScore(float f)
     {
-        score.text = "Score: " + f.ToString("F1");
+        score.text = "Time: " + Mathf.Clamp(999f-f, 0f, 999f).ToString("F0");
     }
     public void UpdateMines(int i)
     {

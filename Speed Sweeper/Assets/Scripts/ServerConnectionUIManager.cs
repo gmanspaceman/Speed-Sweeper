@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,7 @@ public class ServerConnectionUIManager : MonoBehaviour
     public Text isConnected;
     public Text nameInput;
 
+   // Stopwatch timer;
     // Start is called before the first frame update
     private void Awake()
     {
@@ -21,7 +23,15 @@ public class ServerConnectionUIManager : MonoBehaviour
         Networking.OnServerConnected += ServerConnected;
         Networking.OnPingPong += UpdatePing;
     }
-
+    public void Start()
+    {
+       // timer = new Stopwatch();
+        //timer.Start();
+    }
+    public void Update()
+    {
+        
+    }
     public void UpdatePing(float f)
     {
         ping.text = "Ping: " + f + " ms";
@@ -31,7 +41,6 @@ public class ServerConnectionUIManager : MonoBehaviour
         if (nameInput.text.Trim().Length > 0)
         {
             string msgKey = "I_AM";
-
             string message = string.Join(",", msgKey, nameInput.text.Trim());
 
             Networking.SendToServer(message);

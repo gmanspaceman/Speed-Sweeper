@@ -162,14 +162,16 @@ public class BoardGenerator : MonoBehaviour
     }
     public void JoinedGame(int _gameState, int _CurrentTurnId, int _gameId, string[] _raw)
     {
+        g.gameId = _gameId;
         //g.gameId = gameId;
         if (_gameState == 1)
         {
-            string[] gameUpdate = _raw.Skip(3).ToArray();
-            string currentGameState = String.Join("", gameUpdate);
-            currentGameState = "GAME_UPDATE," + currentGameState;
+            string[] gameUpdate = _raw.Skip(4).ToArray();
+            string currentGameState = String.Join(",", gameUpdate);
+            //currentGameState = "GAME_UPDATE," + currentGameState;
             //this should not be just the GAME_UPDATE message
-            GameUpdate(currentGameState);
+            g.UnPackMidGameBoardStateForServer(currentGameState); 
+            
         }
         else
         {
@@ -183,9 +185,14 @@ public class BoardGenerator : MonoBehaviour
     {
         string[] update = gameUpdate.Split(',');
         string currentPlayerTurn = update[1];
+        
+        //print(gameUpdate);
+        
+        string moveUpdate = String.Join(",", update.Skip(2));
 
-        string gameState = String.Join("", update.Skip(2));
-        g.UnPackMidGameBoardStateForServer(gameState);
+        //print(moveUpdate);
+
+        g.UnPackMidGameBoardStateForServer(moveUpdate);
 
         if (int.Parse(currentPlayerTurn) == clientId)
             g.myTurn = true;
@@ -195,7 +202,7 @@ public class BoardGenerator : MonoBehaviour
     public void ServerSend_Move()
     {
         g.myTurn = false;
-        Networking.SendToServer("MOVE," + g.PackMidGameBoardStateForServer("MID_GAME"));
+        Networking.SendToServer(g.PackMidGameBoardStateForServer("MOVE"));
         
     }
     public void ServerSend_GetGameList(bool isConnected)
@@ -307,6 +314,8 @@ public class BoardGenerator : MonoBehaviour
             string msg = string.Join(",", msgKey, g.gameId);
             Networking.SendToServer(msg);
 
+            g.myTurn = true;
+            gameUI.WhosTurn(true);
             //g.gameId = -1; //okay so comenting this out then doesnt lock out game in udpate
         }
     }
@@ -401,7 +410,8 @@ public class BoardGenerator : MonoBehaviour
             //dont need this now but maybe future
  
         }
-        if (!g.myTurn && g.gameId != -1)
+        if (!g.myTurn && g.gameId != -1 && (g.gamePhase == GameState.GamePhase.Playing ||
+                                            g.gamePhase == GameState.GamePhase.PreGame))
             return;
 
 
