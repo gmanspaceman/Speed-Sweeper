@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -40,6 +41,7 @@ public class BoardGenerator : MonoBehaviour
     float animationProgress;
     float mouse1Time;
     float mouse2Time;
+    Stopwatch mouse1DownTime;
 
     public static event Action OnEndGame;
     public static event Action OnDroppingGame;
@@ -71,29 +73,12 @@ public class BoardGenerator : MonoBehaviour
     void Start()
     {
         gameUI = FindObjectOfType<GameUI>();
+        mouse1DownTime = new Stopwatch();
         clientId = -1;
         myTurnCount = 0;
         //if single player just call init
         initalizeGameState();
     }
-
-    //public void ServerSend_GetMidGame()
-    //{
-    //    string msgKey = "MID_GAME";
-    //    Networking.SendToServer(g.PackMidGameBoardStateForServer(msgKey));
-    //}
-    //public void MidGame(string s)
-    //{
-    //    float id = g.gameId;
-
-    //    //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
-    //    initalizeGameState();
-
-    //    g.gameId = id;
-
-    //    g.UnPackMidGameBoardStateForServer(s);
-    //}
-
     public void ServerSend_GetGameInfo()
     {
         string msgKey = "GAME_INFO";
@@ -223,88 +208,6 @@ public class BoardGenerator : MonoBehaviour
             serverListControl.AddServerButton(k.Key.ToString(), k.Value);
         }
     }
-
-    //public void ServerSend_StartServerGame()
-    //{
-    //    string msgKey = "START_GAME";   //build the board and then send this
-    //    Networking.SendToServer(g.SerializeInitBoardForServer(msgKey));
-
-    //    myTurnCount = 0;
-    //    g.myTurn = false;
-    //    //g.gamePhase = GameState.GamePhase.PreGame; //no longer stuck in netconfig
-    //}
-    //public void GridRecieve(string s)
-    //{
-
-    //    //other person started the game
-    //    //populate your board too
-    //    PopulateBombs(g, s);
-
-    //    //I think what is happenis 
-    //    //tje board already has it open so it doesn
-    //    //trip update game barod logic;
-    //    //g.gamePhase = GameState.GamePhase.Playing;
-    //    g.UpdateGameState();
-    //}
-    //public void ServerSend_ClickTile(Tile t)
-    //{
-    //    string msgKey = "TILE_CLICKED";
-
-    //    string msg = string.Join(",", msgKey, t.c_position, t.r_position);
-    //    Networking.SendToServer(msg);
-
-    //    myTurnCount = 0;
-    //    g.myTurn = false; // only allow 1 move
-    //}
-    //public void ServerSend_LeftAndRightClickTile(Tile t)
-    //{
-    //    string msgKey = "TILE_LEFTANDRIGHTCLICKED";
-
-    //    string msg = string.Join(",", msgKey, t.c_position, t.r_position);
-    //    Networking.SendToServer(msg);
-
-    //    myTurnCount = 0;
-    //    g.myTurn = false; // only allow 1 move
-    //}
-    //public void ServerSend_RightClickTile(Tile t, Tile.TileState state)
-    //{
-    //    string msgKey = "TILE_RIGHTCLICKED";
-
-    //    string stt = "2";
-    //    if (state == Tile.TileState.Flagged)
-    //        stt = "1";
-    //    else if (state == Tile.TileState.Unmarked)
-    //        stt = "0";
-
-    //    string msg = string.Join(",", msgKey, t.c_position, t.r_position, stt);
-    //    Networking.SendToServer(msg);
-    //}
-    //public void TileClicked(int c, int r)
-    //{
-    //    TileWasClicked(g.board[c,r]);
-    //}
-    //public void TileLeftAndRightClicked(int c, int r)
-    //{
-    //    TileWasRightAndLeftClicked(g.board[c, r]);
-    //}
-    //public void TileRightClicked(int c, int r, int st)
-    //{
-    //    if ((st == 0 && g.board[c, r].tileState == Tile.TileState.Flagged) ||
-    //        (st == 1 && g.board[c, r].tileState == Tile.TileState.Unmarked))
-    //    { 
-    //        TileWasRightClicked(g.board[c, r]); 
-    //    }
-    //    //if st ==2 somethign is wrong      
-    //}
-    //public void WaitTurn()
-    //{
-    //    myTurnCount = 0;
-    //    g.myTurn = false;
-    //}
-    //public void YourTurn()
-    //{
-    //    g.myTurn = true;
-    //}
     public void ServerSend_EndGame()
     {
         if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
@@ -365,7 +268,7 @@ public class BoardGenerator : MonoBehaviour
         gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
         mouse1Time = 0f;
-        mouse2Time = 0f;
+        mouse2Time = 1f;
 
         g = new GameState(Columns, Rows, numberOfMines);
 
@@ -413,10 +316,21 @@ public class BoardGenerator : MonoBehaviour
         if (!g.myTurn && g.gameId != -1 && (g.gamePhase == GameState.GamePhase.Playing ||
                                             g.gamePhase == GameState.GamePhase.PreGame))
             return;
+        
+        
+        if (Input.GetMouseButtonDown(0))
+        {
+            mouse1DownTime.Restart();
+        }
+        if (Input.GetMouseButtonUp(0))
+        {
+            mouse1DownTime.Stop();
+        }
 
+        print(mouse1DownTime.ElapsedMilliseconds);
 
         //User Input
-        if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1))
+        if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1) || (mouse1DownTime.ElapsedMilliseconds >= 500 && mouse1DownTime.IsRunning))
         {
             Vector3 v = Input.mousePosition;
             bool found;
@@ -426,6 +340,7 @@ public class BoardGenerator : MonoBehaviour
                 return;
 
             string msgKey;
+            
 
             if (g.gamePhase == GameState.GamePhase.PreGame)
             {
@@ -465,7 +380,11 @@ public class BoardGenerator : MonoBehaviour
                 mouse1Time = (Input.GetMouseButtonUp(0)) ? Time.time : mouse1Time;
                 mouse2Time = (Input.GetMouseButtonUp(1)) ? Time.time : mouse2Time;
 
-                if (Input.GetMouseButtonUp(0) && Input.GetMouseButton(1))
+                if (mouse1DownTime.ElapsedMilliseconds == 0 && !Input.GetMouseButton(1) && !Input.GetMouseButtonUp(1))
+                { 
+
+                }
+                else if (Input.GetMouseButtonUp(0) && Input.GetMouseButton(1))
                 {
                     mouse1Time = Time.time;
                 }
@@ -473,7 +392,7 @@ public class BoardGenerator : MonoBehaviour
                 {
                     mouse2Time = Time.time;
                 }
-                else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f)
+                else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f && mouse1DownTime.ElapsedMilliseconds < 500)
                 {
                     bool leftandrigthwilldosomething = false;
 
@@ -502,9 +421,6 @@ public class BoardGenerator : MonoBehaviour
                         }
                     }
 
-
-
-
                     if (leftandrigthwilldosomething)
                     {
                         //if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
@@ -516,7 +432,7 @@ public class BoardGenerator : MonoBehaviour
                             ServerSend_Move();
                     }
                 }
-                else if (Input.GetMouseButtonUp(0))
+                else if (Input.GetMouseButtonUp(0) && mouse1DownTime.ElapsedMilliseconds < 500)
                 {
                     if (t.tileState != Tile.TileState.Opened)
                     {
@@ -530,8 +446,10 @@ public class BoardGenerator : MonoBehaviour
 
                     }
                 }
-                else if (Input.GetMouseButtonUp(1))
+                else if (Input.GetMouseButtonUp(1) || (mouse1DownTime.ElapsedMilliseconds >= 500))
                 {
+                    mouse1DownTime.Reset();
+
                     if (t.tileState != Tile.TileState.Opened)
                     {
                         //if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
@@ -543,6 +461,7 @@ public class BoardGenerator : MonoBehaviour
                             ServerSend_Move();
                     }
                 }
+
             }
         }
     }
