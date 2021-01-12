@@ -74,10 +74,47 @@ public class BoardGenerator : MonoBehaviour
     {
         gameUI = FindObjectOfType<GameUI>();
         mouse1DownTime = new Stopwatch();
+        
+
         clientId = -1;
         myTurnCount = 0;
         //if single player just call init
         initalizeGameState();
+        if (PlayerPrefs.HasKey("LocalSave"))
+        {
+            g.UnPackMidGameBoardStateForServer(PlayerPrefs.GetString("LocalSave"));
+        }
+    }
+    public void initalizeGameState(int _gameId = -1)
+    {
+        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
+
+        //get saved values from menu screens or whenever
+        Rows = (int)PlayerPrefs.GetFloat("Rows");
+        Columns = (int)PlayerPrefs.GetFloat("Cols");
+        numberOfMines = (int)PlayerPrefs.GetFloat("Mines");
+
+        numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
+        mouse1Time = 0f;
+        mouse2Time = 1f;
+
+        g = new GameState(Columns, Rows, numberOfMines);
+
+        g.gameId = _gameId;
+
+        buildGameBoard(g); // builds game with no bombs nothing showing
+                           //gamestate has the right size but no bombs
+                           //lets start with building the game locally and the TX the whole
+                           //thing to the server since we cant guarantee the random see
+                           //then, for consistency, we will have the server send us the game back
+                           //and then we will load that version of the game which should be identical
+                           //Can optimize later and not do this
+
+        //intersting, local player update the game state and sends copy to server
+        //server sends it to the other player
+
+        if (!animationActive)
+            StartCoroutine(AnimateRippleRight(g));
     }
     public void ServerSend_GetGameInfo()
     {
@@ -127,7 +164,12 @@ public class BoardGenerator : MonoBehaviour
         //Send this to a server
         string msgKey = "MAKE_GAME"; //figure out extra tokens
 
-        Networking.SendToServer(msgKey);
+        string makeGame = String.Join(",", msgKey,
+                                            Columns,
+                                            Rows,
+                                            numberOfMines);
+
+        Networking.SendToServer(makeGame);
         myTurnCount = 2;
         g.myTurn = true;
     }
@@ -263,31 +305,7 @@ public class BoardGenerator : MonoBehaviour
         g.gameId = -1;
     }
 
-    public void initalizeGameState(int _gameId = -1)
-    {
-        gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
-        numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
-        mouse1Time = 0f;
-        mouse2Time = 1f;
-
-        g = new GameState(Columns, Rows, numberOfMines);
-
-        g.gameId = _gameId;
-
-        buildGameBoard(g); // builds game with no bombs nothing showing
-                           //gamestate has the right size but no bombs
-                           //lets start with building the game locally and the TX the whole
-                           //thing to the server since we cant guarantee the random see
-                           //then, for consistency, we will have the server send us the game back
-                           //and then we will load that version of the game which should be identical
-                           //Can optimize later and not do this
-
-        //intersting, local player update the game state and sends copy to server
-        //server sends it to the other player
-
-        if (!animationActive)
-            StartCoroutine(AnimateRippleRight(g));
-    }
+    
 
 
 
@@ -327,7 +345,7 @@ public class BoardGenerator : MonoBehaviour
             mouse1DownTime.Stop();
         }
 
-        print(mouse1DownTime.ElapsedMilliseconds);
+        //print(mouse1DownTime.ElapsedMilliseconds);
 
         //User Input
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1) || (mouse1DownTime.ElapsedMilliseconds >= 500 && mouse1DownTime.IsRunning))
@@ -363,6 +381,10 @@ public class BoardGenerator : MonoBehaviour
             else if (g.gamePhase == GameState.GamePhase.Win || 
                      g.gamePhase == GameState.GamePhase.Lose)
             {
+                //if game is over clear the local save
+                PlayerPrefs.DeleteKey("LocalSave");
+                PlayerPrefs.Save();
+
                 if (Input.GetMouseButtonUp(0))
                 {
                     //Restart(); //commented out to test havint the server dictact all gamestates
@@ -461,8 +483,13 @@ public class BoardGenerator : MonoBehaviour
                             ServerSend_Move();
                     }
                 }
-
+                //save game locallys
+                PlayerPrefs.SetString("LocalSave", g.PackMidGameBoardStateForServer("MOVE"));
+                PlayerPrefs.Save();
             }
+
+            
+
         }
     }
     public void UpdateUI()
@@ -716,22 +743,61 @@ public class BoardGenerator : MonoBehaviour
         Transform tileHolder = new GameObject(holderName).transform;
         tileHolder.parent = transform;
 
+        float width = ((float)Camera.main.orthographicSize * 2f * (float)Screen.width / (float)Screen.height);
+        float height = width * (float)Screen.height/ (float)Screen.width;
+
+        print("Board width: " + width);
+        print("Tile Width needs to be: " + width / (_g.col + 1));
+        float tileScaleW = (float) (width / (float)(_g.col + 0));
+        float tileScaleH = (float) (height / (float)(_g.row + 1));
+
+        //TilePrefab.localScale = new Vector3(TilePrefab.localScale.x * tileScale,
+        //                                        TilePrefab.localScale.y,
+        //                                        TilePrefab.localScale.z * tileScale);
+
         for (int c = 0; c < _g.col; c++)
         {
             for (int r = 0; r < _g.row; r++)
             {
 
-                Vector3 tilePos = new Vector3(-_g.col / 2f + TilePrefab.localScale.x / 2f + c,
+                float tileScale = Mathf.Min(tileScaleW, tileScaleH);
+
+
+                Vector3 tilePos = new Vector3(-(_g.col* tileScale) / 2f + tileScale * (c),
                                                 1,
-                                                -_g.row / 2f + TilePrefab.localScale.z / 2f + r);
+                                                -(_g.row * tileScale) / 2f + tileScale * (r));
 
                 Transform newTile = Instantiate(TilePrefab, tilePos, Quaternion.Euler(Vector3.right * 90));
-                newTile.localScale = Vector3.one * 0.9f;
+
+
+                
+
+                newTile.localScale = Vector3.one * tileScale * 0.9f;
+
+                //newTile.localScale = new Vector3(tileScaleW * 0.9f,
+                //                                 1 * 0.9f,
+                //                                 tileScaleH * 0.9f);
+
                 newTile.parent = tileHolder;
                 newTile.name = "Tile c:" + c.ToString() + " r:" + r.ToString();
 
                 Vector3 tmp = newTile.GetComponent<BoxCollider>().size;
                 newTile.GetComponent<BoxCollider>().size = new Vector3(tmp.x / 0.9f, tmp.y / 0.9f, tmp.z / 0.9f);
+
+
+                //Vector3 tilePos = new Vector3(-_g.col / 2f + TilePrefab.localScale.x / 2f + c,
+                //                                1,
+                //                                -_g.row / 2f + TilePrefab.localScale.z / 2f + r);
+
+                //Transform newTile = Instantiate(TilePrefab, tilePos, Quaternion.Euler(Vector3.right * 90));
+
+                //newTile.localScale = Vector3.one *  0.9f;
+                //newTile.parent = tileHolder;
+                //newTile.name = "Tile c:" + c.ToString() + " r:" + r.ToString();
+
+                //Vector3 tmp = newTile.GetComponent<BoxCollider>().size;
+                //newTile.GetComponent<BoxCollider>().size = new Vector3(tmp.x / 0.9f, tmp.y / 0.9f, tmp.z / 0.9f);
+
 
                 //board[c, r] = newTile;
                 _g.board[c, r] = new Tile(c, r, newTile, _g.col, _g.row);

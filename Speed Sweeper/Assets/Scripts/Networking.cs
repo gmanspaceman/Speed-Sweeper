@@ -8,22 +8,12 @@ using System.Runtime.InteropServices;
 
 public class Networking : MonoBehaviour
 {
-    //public static event Action<bool> OnTCPServerConnected;
-    //public static event Action<bool> OnWebSocketServerConnected;
     public static event Action<bool> OnServerConnected;
-    //public static event Action OnWaitTurn;
     public static event Action<float> OnPingPong;
     public static event Action<int> OnHello;
-    //public static event Action OnGetMidGame;
-    //public static event Action<string> OnMidGame;
     public static event Action<string> OnGameUpdate;
-    //public static event Action OnYourTurn;
     public static event Action<int, int> OnRestart;
     public static event Action<int, int, int, string[]> OnJoinedGame;
-    //public static event Action<int,int> OnTileClicked;
-    //public static event Action<int,int, int> OnTileRightClicked;
-    //public static event Action<int,int> OnTileLeftAndRightClicked;
-    //public static event Action<string> OnGridRecieve;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
 
@@ -35,8 +25,8 @@ public class Networking : MonoBehaviour
     public static TcpClient _tcpClient;
     public static NetworkStream _stream;
     public Stopwatch pingPong;
-
-    bool isConnected = false;
+    public float pingTime { get; set; }
+    public bool isConnected = false;
 
     #region WebSocketJSLib Implement
     [DllImport("__Internal")]
@@ -62,13 +52,19 @@ public class Networking : MonoBehaviour
     #endregion
 
     //ServerConnectionUIManager.OnConnectClicked += Reconnect;
-
-    void Start()
+    private void Awake()
     {
+        DontDestroyOnLoad(gameObject);
+    }
+    public void MultiStart()
+    {
+
         //OnTCPServerConnected?.Invoke(false);
         //OnWebSocketServerConnected?.Invoke(false);
         OnServerConnected?.Invoke(false);
-        Connect();
+        
+        //if(PlayerPrefs.GetString("GameMode") == "Multi")
+            Connect();
     }
     public void Reconnect()
     {
@@ -228,7 +224,7 @@ public class Networking : MonoBehaviour
             //    OnYourTurn?.Invoke();
             //    break;
             case "PONG":
-                
+                pingTime = pingPong.ElapsedMilliseconds;
                 OnPingPong?.Invoke(pingPong.ElapsedMilliseconds);
                 pingPong.Reset();
                 break;
