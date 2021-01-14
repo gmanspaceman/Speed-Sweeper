@@ -354,5 +354,28 @@ public class Networking : MonoBehaviour
         //We can do the same as RecvString here.
         print("JJSLIB Error: " + message);
     }
+    public void ServerSend_WHOAMI()
+    {
+        string msgKey = "WHOAMI";
+
+        if (isConnected)
+            SendToServer(msgKey);
+    }
+    public void ServerSend_IAM(string s)
+    {
+        string msgKey = "I_AM";
+        string message = string.Join(",", msgKey,
+                                            s.Trim());
+
+        SendToServer(message);
+    }
+    public void ServerSend_GetGameList()
+    {
+        string msgKey = "GET_GAMES";
+        //joining mid game will need more work
+        //need to get copy of grid from host to populate
+        if (isConnected)
+            SendToServer(msgKey);
+    }
 }
 

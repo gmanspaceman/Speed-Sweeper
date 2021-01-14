@@ -41,7 +41,9 @@ public class BoardGenerator : MonoBehaviour
     float animationProgress;
     float mouse1Time;
     float mouse2Time;
+    bool doubleClick;
     Stopwatch mouse1DownTime;
+    Stopwatch mouse1TimeSinceLast;
 
     public static event Action OnEndGame;
     public static event Action OnDroppingGame;
@@ -74,25 +76,47 @@ public class BoardGenerator : MonoBehaviour
     {
         gameUI = FindObjectOfType<GameUI>();
         mouse1DownTime = new Stopwatch();
-        
+        mouse1TimeSinceLast = new Stopwatch();
+        mouse1TimeSinceLast.Start();
 
         clientId = -1;
         myTurnCount = 0;
+
         //if single player just call init
+
         initalizeGameState();
-        if (PlayerPrefs.HasKey("LocalSave"))
+        if (PlayerPrefs.GetString("GameMode") == "Solo")
         {
-            g.UnPackMidGameBoardStateForServer(PlayerPrefs.GetString("LocalSave"));
+            if (PlayerPrefs.HasKey("LocalSave"))
+            {
+                g.UnPackMidGameBoardStateForServer(PlayerPrefs.GetString("LocalSave"));
+            }
         }
+        else if (PlayerPrefs.GetString("GameMode") == "Multi")
+        {
+            //ServerSend_WHOAMI(true);
+            //ServerSend_IAM(PlayerPrefs.GetString("Username","NaN"));
+
+            if (PlayerPrefs.GetString("GameMode_Multi") == "Make")
+            {
+                ServerSend_MakeServerGame();
+            }
+            else if (PlayerPrefs.GetString("GameMode_Multi") == "Join")
+            {
+                ServerSend_JoinGame(PlayerPrefs.GetInt("JoinGame"));
+            }
+        }
+        //if (!animationActive)
+        //    StartCoroutine(AnimateRippleRight(g));
     }
     public void initalizeGameState(int _gameId = -1)
     {
         gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
 
         //get saved values from menu screens or whenever
-        Rows = (int)PlayerPrefs.GetFloat("Rows");
-        Columns = (int)PlayerPrefs.GetFloat("Cols");
-        numberOfMines = (int)PlayerPrefs.GetFloat("Mines");
+        Rows = (int)PlayerPrefs.GetFloat("Rows", Rows);
+        Columns = (int)PlayerPrefs.GetFloat("Cols", Columns);
+        numberOfMines = (int)PlayerPrefs.GetFloat("Mines", numberOfMines);
 
         numberOfMines = Mathf.Clamp(numberOfMines, 0, Rows * Columns - 1);
         mouse1Time = 0f;
@@ -112,9 +136,7 @@ public class BoardGenerator : MonoBehaviour
 
         //intersting, local player update the game state and sends copy to server
         //server sends it to the other player
-
-        if (!animationActive)
-            StartCoroutine(AnimateRippleRight(g));
+        
     }
     public void ServerSend_GetGameInfo()
     {
@@ -128,6 +150,14 @@ public class BoardGenerator : MonoBehaviour
 
         if(isConnected)
             Networking.SendToServer(msgKey);
+    }
+    public void ServerSend_IAM(string s)
+    {
+        string msgKey = "I_AM";
+        string message = string.Join(",", msgKey, 
+                                            s.Trim());
+
+        Networking.SendToServer(message);
     }
     public void Hello(int id)
     {
@@ -172,6 +202,7 @@ public class BoardGenerator : MonoBehaviour
         Networking.SendToServer(makeGame);
         myTurnCount = 2;
         g.myTurn = true;
+        gameUI.WhosTurn(g.myTurn);
     }
     public void ServerSend_JoinGame(int gameId)
     {
@@ -186,6 +217,7 @@ public class BoardGenerator : MonoBehaviour
 
         myTurnCount = 0;
         g.myTurn = false;
+        gameUI.WhosTurn(g.myTurn);
     }
     public void JoinedGame(int _gameState, int _CurrentTurnId, int _gameId, string[] _raw)
     {
@@ -221,14 +253,18 @@ public class BoardGenerator : MonoBehaviour
 
         g.UnPackMidGameBoardStateForServer(moveUpdate);
 
+
         if (int.Parse(currentPlayerTurn) == clientId)
             g.myTurn = true;
         else
             g.myTurn = false;
+
+        gameUI.WhosTurn(g.myTurn);
     }
     public void ServerSend_Move()
     {
         g.myTurn = false;
+        gameUI.WhosTurn(g.myTurn);
         Networking.SendToServer(g.PackMidGameBoardStateForServer("MOVE"));
         
     }
@@ -252,6 +288,12 @@ public class BoardGenerator : MonoBehaviour
     }
     public void ServerSend_EndGame()
     {
+        PlayerPrefs.DeleteKey("LocalSave");
+        PlayerPrefs.DeleteKey("LocalSave_Rows");
+        PlayerPrefs.DeleteKey("LocalSave_Cols");
+        PlayerPrefs.DeleteKey("LocalSave_Mines");
+        PlayerPrefs.Save();
+
         if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
         {
             string msgKey = "END_GAME";
@@ -260,7 +302,7 @@ public class BoardGenerator : MonoBehaviour
             Networking.SendToServer(msg);
 
             g.myTurn = true;
-            gameUI.WhosTurn(true);
+            gameUI.WhosTurn(g.myTurn);
             //g.gameId = -1; //okay so comenting this out then doesnt lock out game in udpate
         }
     }
@@ -283,8 +325,11 @@ public class BoardGenerator : MonoBehaviour
         {
             g.myTurn = true;
         }
+        gameUI.WhosTurn(g.myTurn);
 
-        
+        //if (!animationActive)
+        //    StartCoroutine(AnimateRippleRight(g));
+
     }
     public void ServerSend_RestartGame()
     {
@@ -316,14 +361,38 @@ public class BoardGenerator : MonoBehaviour
             return;
         
         UpdateUI();
-        AniateClickDownHover();
 
+
+        
+        if (Input.GetMouseButtonDown(0))
+        {
+            mouse1DownTime.Restart();
+
+            if (doubleClick || mouse1TimeSinceLast.ElapsedMilliseconds < 250f)
+            {
+                doubleClick = true;
+            }
+
+            mouse1TimeSinceLast.Restart();
+        }
+        if (Input.GetMouseButtonUp(0))
+        {
+            mouse1DownTime.Stop();
+            doubleClick = false;
+        }
+
+
+        AniateClickDownHover(doubleClick);
+        
+        
+        
         if (g.gamePhase == GameState.GamePhase.NetworkConfig)
         {
             if(g.gameType == GameState.GameType.Solo)
             {
                 g.gamePhase = GameState.GamePhase.PreGame;
                 g.myTurn = true; //i think this is alreayd true
+                gameUI.WhosTurn(true);
             }
 
             //else do server stuff
@@ -334,21 +403,16 @@ public class BoardGenerator : MonoBehaviour
         if (!g.myTurn && g.gameId != -1 && (g.gamePhase == GameState.GamePhase.Playing ||
                                             g.gamePhase == GameState.GamePhase.PreGame))
             return;
-        
-        
-        if (Input.GetMouseButtonDown(0))
-        {
-            mouse1DownTime.Restart();
-        }
-        if (Input.GetMouseButtonUp(0))
-        {
-            mouse1DownTime.Stop();
-        }
 
+
+        
         //print(mouse1DownTime.ElapsedMilliseconds);
 
         //User Input
-        if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1) || (mouse1DownTime.ElapsedMilliseconds >= 500 && mouse1DownTime.IsRunning))
+        if (Input.GetMouseButtonUp(0) || 
+            Input.GetMouseButtonUp(1) || 
+            (mouse1DownTime.ElapsedMilliseconds >= 500 && mouse1DownTime.IsRunning) ||
+            doubleClick)
         {
             Vector3 v = Input.mousePosition;
             bool found;
@@ -382,8 +446,7 @@ public class BoardGenerator : MonoBehaviour
                      g.gamePhase == GameState.GamePhase.Lose)
             {
                 //if game is over clear the local save
-                PlayerPrefs.DeleteKey("LocalSave");
-                PlayerPrefs.Save();
+                
 
                 if (Input.GetMouseButtonUp(0))
                 {
@@ -402,9 +465,9 @@ public class BoardGenerator : MonoBehaviour
                 mouse1Time = (Input.GetMouseButtonUp(0)) ? Time.time : mouse1Time;
                 mouse2Time = (Input.GetMouseButtonUp(1)) ? Time.time : mouse2Time;
 
-                if (mouse1DownTime.ElapsedMilliseconds == 0 && !Input.GetMouseButton(1) && !Input.GetMouseButtonUp(1))
-                { 
-
+                if (!doubleClick && mouse1DownTime.ElapsedMilliseconds == 0 && !Input.GetMouseButton(1) && !Input.GetMouseButtonUp(1))
+                {
+                    print("here2");
                 }
                 else if (Input.GetMouseButtonUp(0) && Input.GetMouseButton(1))
                 {
@@ -414,8 +477,9 @@ public class BoardGenerator : MonoBehaviour
                 {
                     mouse2Time = Time.time;
                 }
-                else if (Mathf.Abs(mouse2Time - mouse1Time) < 0.25f && mouse1DownTime.ElapsedMilliseconds < 500)
+                else if ((doubleClick || Mathf.Abs(mouse2Time - mouse1Time) < 0.25f) && mouse1DownTime.ElapsedMilliseconds < 500)
                 {
+                    print("here5");
                     bool leftandrigthwilldosomething = false;
 
 
@@ -484,8 +548,14 @@ public class BoardGenerator : MonoBehaviour
                     }
                 }
                 //save game locallys
-                PlayerPrefs.SetString("LocalSave", g.PackMidGameBoardStateForServer("MOVE"));
-                PlayerPrefs.Save();
+                if (g.gamePhase == GameState.GamePhase.Playing)
+                {
+                    PlayerPrefs.SetString("LocalSave", g.PackMidGameBoardStateForServer("MOVE"));
+                    PlayerPrefs.SetFloat("LocalSave_Rows", g.row);
+                    PlayerPrefs.SetFloat("LocalSave_Cols", g.col);
+                    PlayerPrefs.SetFloat("LocalSave_Mines", g.numMines);
+                    PlayerPrefs.Save();
+                }
             }
 
             
@@ -505,9 +575,9 @@ public class BoardGenerator : MonoBehaviour
 
         gameUI.WhosTurn(g.myTurn);
     }
-    public void AniateClickDownHover()
+    public void AniateClickDownHover(bool doubleClick)
     {
-        if (Input.GetMouseButton(0))
+        if (Input.GetMouseButton(0) || doubleClick)
         {
             if (g.gamePhase != GameState.GamePhase.Win && g.gamePhase != GameState.GamePhase.Lose)
             {
@@ -525,7 +595,7 @@ public class BoardGenerator : MonoBehaviour
                     {
                         Vector2Int tmp = new Vector2Int(c, r);
 
-                        if(Input.GetMouseButton(1) && t.neighbors.Contains(tmp))
+                        if((Input.GetMouseButton(1) || doubleClick) && t.neighbors.Contains(tmp))
                         {
                             if (g.board[c,r].tileState != Tile.TileState.Flagged && g.board[c, r].tileState != Tile.TileState.Questioned)
                             {
@@ -743,40 +813,38 @@ public class BoardGenerator : MonoBehaviour
         Transform tileHolder = new GameObject(holderName).transform;
         tileHolder.parent = transform;
 
-        float width = ((float)Camera.main.orthographicSize * 2f * (float)Screen.width / (float)Screen.height);
-        float height = width * (float)Screen.height/ (float)Screen.width;
+        float width = ((float)Camera.main.orthographicSize * 2f * (float)Camera.main.aspect);
+        float height = (float)Camera.main.orthographicSize * 2f;
 
         print("Board width: " + width);
-        print("Tile Width needs to be: " + width / (_g.col + 1));
-        float tileScaleW = (float) (width / (float)(_g.col + 0));
-        float tileScaleH = (float) (height / (float)(_g.row + 1));
+        print("Tile Width needs to be: " + (float)width / (float)(_g.col + 0));
+        float tileScaleW = (float) (width / (float)(_g.col + 2));
+        float tileScaleH = (float) (height / (float)(_g.row + 3));
 
-        //TilePrefab.localScale = new Vector3(TilePrefab.localScale.x * tileScale,
-        //                                        TilePrefab.localScale.y,
-        //                                        TilePrefab.localScale.z * tileScale);
+        float tileScale = Mathf.Min(tileScaleW, tileScaleH);
+
+        //Transform scaled = TilePrefab;
+        //scaled.localScale = scaled.localScale * tileScale;
 
         for (int c = 0; c < _g.col; c++)
         {
             for (int r = 0; r < _g.row; r++)
             {
-
-                float tileScale = Mathf.Min(tileScaleW, tileScaleH);
-
-
-                Vector3 tilePos = new Vector3(-(_g.col* tileScale) / 2f + tileScale * (c),
+                Vector3 tilePos = (
+                                    new Vector3(-(_g.col* tileScale) / 2f + tileScale / 2f + tileScale * (c),
                                                 1,
-                                                -(_g.row * tileScale) / 2f + tileScale * (r));
+                                                -(_g.row * tileScale) / 2f + tileScale / 2f + tileScale * (r)));
 
                 Transform newTile = Instantiate(TilePrefab, tilePos, Quaternion.Euler(Vector3.right * 90));
 
 
                 
 
-                newTile.localScale = Vector3.one * tileScale * 0.9f;
+                //newTile.localScale = Vector3.one * tileScale * 0.9f;
 
-                //newTile.localScale = new Vector3(tileScaleW * 0.9f,
-                //                                 1 * 0.9f,
-                //                                 tileScaleH * 0.9f);
+                newTile.localScale = new Vector3(tileScale * 0.9f,
+                                                 tileScale * 0.9f,
+                                                 tileScale * 0.9f);
 
                 newTile.parent = tileHolder;
                 newTile.name = "Tile c:" + c.ToString() + " r:" + r.ToString();

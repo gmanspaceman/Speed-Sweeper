@@ -5,13 +5,13 @@ public class ButtonListControl : MonoBehaviour
 {
     [SerializeField]
     private GameObject buttonTemplate;
-    public BoardGenerator boardGen;
 
     public void AddServerButton(string s, int players)
     {
         GameObject button = Instantiate(buttonTemplate);
         button.SetActive(true);
-        button.GetComponent<ButtonListButton>().SetText("Game: " + s + "" + " Players: " + players);
+        //button.GetComponent<ButtonListButton>().SetText("Game: " + s + "" + " Players: " + players);
+        button.GetComponent<ButtonListButton>().SetComplexText(int.Parse(s),"GMAN", players);
         button.transform.SetParent(buttonTemplate.transform.parent, false);
 
         button.GetComponent<Button>().onClick.AddListener(() => JoinGameButton(int.Parse(s)));
@@ -19,7 +19,9 @@ public class ButtonListControl : MonoBehaviour
     }
     public void JoinGameButton(int gameId)
     {
-        boardGen.ServerSend_JoinGame(gameId);
+        PlayerPrefs.SetInt("JoinGame", gameId);
+        PlayerPrefs.Save();
+        //boardGen.ServerSend_JoinGame(gameId);
     }
     public void RemoveAllServerButton()
     {

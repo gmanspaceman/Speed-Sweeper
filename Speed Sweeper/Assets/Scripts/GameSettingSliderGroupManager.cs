@@ -21,6 +21,11 @@ public class GameSettingSliderGroupManager : MonoBehaviour
         rowsLabel.GetComponent<TextMeshProUGUI>().text = "ROWS: " + row;
         colsLabel.GetComponent<TextMeshProUGUI>().text = "COLUMNS: " + col;
         minesLabel.GetComponent<TextMeshProUGUI>().text = "MINES: " + mine;
+
+        PlayerPrefs.SetFloat("Rows", row);
+        PlayerPrefs.SetFloat("Cols", col);
+        PlayerPrefs.SetFloat("Mines", mine);
+        PlayerPrefs.Save();
     }
     public void SetSlidersInteractible(bool val)
     {

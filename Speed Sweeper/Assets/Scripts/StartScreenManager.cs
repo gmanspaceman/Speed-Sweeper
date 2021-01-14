@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,11 +25,10 @@ public class StartScreenManager : MonoBehaviour
     public CanvasGroup OptionsMenu;
 
 
-    //public CanvasGroup menuButtons;
-    //public CanvasGroup multiplayerButtons;
-    //public CanvasGroup optionsButtons;
-    //public CanvasGroup GameSettings;
-    //public CanvasGroup JoinGame;
+    public GameObject username;
+    public GameObject enterUsername;
+
+    public ButtonListControl serverListControl;
 
     public AudioSource backgroundMusic;
     public ParticleSystem fog;
@@ -62,7 +62,17 @@ public class StartScreenManager : MonoBehaviour
 
         OptionsMenu.gameObject.SetActive(false);
         OptionsMenu.alpha = 0;
+        
         OptionsMenu.GetComponentInChildren<Slider>().value = PlayerPrefs.GetFloat("Volume", 1);
+        //SoloGameSettings.SetSLiders((int)PlayerPrefs.GetFloat("Cols", SoloGameSettings.cols.value),
+        //                            (int)PlayerPrefs.GetFloat("Rows", SoloGameSettings.rows.value),
+        //                            (int)PlayerPrefs.GetFloat("Mines", SoloGameSettings.mines.value));
+
+        //MultiGameSettings.SetSLiders((int)PlayerPrefs.GetFloat("Cols", MultiGameSettings.cols.value),
+        //                            (int)PlayerPrefs.GetFloat("Rows", MultiGameSettings.rows.value),
+        //                            (int)PlayerPrefs.GetFloat("Mines", MultiGameSettings.mines.value));
+
+        username.GetComponent<TextMeshProUGUI>().text = PlayerPrefs.GetString("Username", "");
 
         sceneMask.alpha = 1;
         backgroundMusic.volume = 0;
@@ -114,8 +124,13 @@ public class StartScreenManager : MonoBehaviour
     }
     public void TransitionFrom_MainMenu_To_MultiplayerMenu()
     {
+        enterUsername.SetActive(false);
+
         PlayerPrefs.SetString("GameMode", "Multi");
         PlayerPrefs.Save();
+
+        //username.GetComponent<TextMeshProUGUI>().text = PlayerPrefs.GetString("Username", "");
+
         StartCoroutine(FadeOutIn(MainMenu, MultiplayerMenu));
     }
     public void TransitionFrom_MainMenu_To_Options()
@@ -130,6 +145,11 @@ public class StartScreenManager : MonoBehaviour
     //Solo Menu Navigation
     public void TransitionFrom_SoloMenu_To_Continue()
     {
+        PlayerPrefs.SetFloat("Rows", PlayerPrefs.GetFloat("LocalSave_Rows"));
+        PlayerPrefs.SetFloat("Cols", PlayerPrefs.GetFloat("LocalSave_Cols"));
+        PlayerPrefs.SetFloat("Mines", PlayerPrefs.GetFloat("LocalSave_Mines"));
+        PlayerPrefs.Save();
+
         StartCoroutine(FadeInLoad(sceneMask, 1));
     }
     public void TransitionFrom_SoloMenu_To_SoloNewGameMenu()
@@ -148,6 +168,9 @@ public class StartScreenManager : MonoBehaviour
         if (PlayerPrefs.HasKey("LocalSave"))
         {
             PlayerPrefs.DeleteKey("LocalSave");
+            PlayerPrefs.DeleteKey("LocalSave_Rows");
+            PlayerPrefs.DeleteKey("LocalSave_Cols");
+            PlayerPrefs.DeleteKey("LocalSave_Mines");
             PlayerPrefs.Save();
         }
         StartCoroutine(FadeInLoad(sceneMask, 1));
@@ -160,37 +183,108 @@ public class StartScreenManager : MonoBehaviour
     //Multiplayer Menu Navigation
     public void TransitionFrom_MultuplayerMenu_To_MultiplayerNewGameMenu()
     {
+        
+        if (username.GetComponent<TextMeshProUGUI>().text.Length <= 1)
+        {
+            enterUsername.SetActive(true);
+            return;
+        }
+        
+
+        PlayerPrefs.SetString("Username", username.GetComponent<TextMeshProUGUI>().text);
+        PlayerPrefs.Save();
+
+        connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
+
         StartCoroutine(WaitForServerConnect(MultiplayerMenu, MultiplayerNewGameMenu));
         //StartCoroutine(FadeOutIn(MultiplayerMenu, MultiplayerNewGameMenu));
     }
     public void TransitionFrom_MultuplayerMenu_To_MultiplayerJoinGameMenu()
     {
+        PlayerPrefs.DeleteKey("JoinGame");
+        PlayerPrefs.Save();
+
+        if (username.GetComponent<TextMeshProUGUI>().text.Length <= 1)
+        {
+            enterUsername.SetActive(true);
+            return;
+        }
+
+        PlayerPrefs.SetString("Username", username.GetComponent<TextMeshProUGUI>().text);
+        PlayerPrefs.Save();
+
+        connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
+
+        ///need to populate the server list
+        Networking.OnGameList += GameList;
+
+        
+
         StartCoroutine(WaitForServerConnect(MultiplayerMenu, MultiplayerJoinGameMenu));
         //StartCoroutine(FadeOutIn(MultiplayerMenu, MultiplayerJoinGameMenu));
     }
+    
+    
+    public void GameList(Dictionary<int, int> gameList)
+    {
+        serverListControl.RemoveAllServerButton();
+        //Display the game list so user can choose what to join
+        foreach (KeyValuePair<int, int> k in gameList)
+        {
+            print("Game " + k.Key + " has " + k.Value + " players.");
+            serverListControl.AddServerButton(k.Key.ToString(), k.Value);
+        }
+    }
+
+
     public void TransitionFrom_MultuplayerMenu_To_MainMenu()
     {
         PlayerPrefs.DeleteKey("GameMode");
+        PlayerPrefs.Save();
         StartCoroutine(FadeOutIn(MultiplayerMenu, MainMenu));
     }
 
     //Multiplayer New Game Menu Navigation
     public void TransitionFrom_MultiplayerNewGameMenu_To_Start()
     {
+        PlayerPrefs.SetString("GameMode_Multi", "Make");
+        PlayerPrefs.Save();
         StartCoroutine(FadeInLoad(sceneMask, 1));
     }
     public void TransitionFrom_MultiplayerNewGameMenu_To_MultiplayerMenu()
     {
+        connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
+
+        //username.GetComponent<TextMeshProUGUI>().text = PlayerPrefs.GetString("Username", "");
+
+        enterUsername.SetActive(false);
         StartCoroutine(FadeOutIn(MultiplayerNewGameMenu, MultiplayerMenu));
     }
 
     //Multiplayer Join Game Menu Navigation
     public void TransitionFrom_MultiplayerJoinGameMenu_To_Start()
     {
+        Networking.OnGameList -= GameList;
+
+        if (!PlayerPrefs.HasKey("JoinGame"))
+        {
+            print("No Join Game Id");
+            return;
+        }
+
+        PlayerPrefs.SetString("GameMode_Multi", "Join");
+        PlayerPrefs.Save();
         StartCoroutine(FadeInLoad(sceneMask, 1));
     }
     public void TransitionFrom_MultiplayerJoinGameMenu_To_MultiplayerMenu()
     {
+        Networking.OnGameList -= GameList;
+
+        connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
+
+        //username.GetComponent<TextMeshProUGUI>().text = PlayerPrefs.GetString("Username", "");
+
+        enterUsername.SetActive(false);
         StartCoroutine(FadeOutIn(MultiplayerJoinGameMenu, MultiplayerMenu));
     }
 
@@ -203,9 +297,10 @@ public class StartScreenManager : MonoBehaviour
    IEnumerator WaitForServerConnect(CanvasGroup from, CanvasGroup to)
     {
         n.MultiStart();
-
+        
         //flash connecting on screen
         TextMeshProUGUI i = connectStatus.GetComponent<TextMeshProUGUI>();
+        i.text = "CONNECTING";
         do
         {
 
@@ -230,6 +325,10 @@ public class StartScreenManager : MonoBehaviour
 
         yield return null;
         //display connected or no server found
+
+        n.ServerSend_WHOAMI();
+        n.ServerSend_IAM(PlayerPrefs.GetString("Username", "NaN"));
+        n.ServerSend_GetGameList();
 
         StartCoroutine(FadeOutIn(from, to));
     }
@@ -270,16 +369,22 @@ public class StartScreenManager : MonoBehaviour
     }
     public void SetRows(float rows)
     {
+        SoloGameSettings.rowsLabel.GetComponent<TextMeshProUGUI>().text = "ROWS: " + rows;
+        MultiGameSettings.rowsLabel.GetComponent<TextMeshProUGUI>().text = "ROWS: " + rows;
         PlayerPrefs.SetFloat("Rows", rows);
         PlayerPrefs.Save();
     }
     public void SetCols(float cols)
     {
+        SoloGameSettings.colsLabel.GetComponent<TextMeshProUGUI>().text = "COLUMNS: " + cols;
+        MultiGameSettings.colsLabel.GetComponent<TextMeshProUGUI>().text = "COLUMNS: " + cols;
         PlayerPrefs.SetFloat("Cols", cols);
         PlayerPrefs.Save();
     }
     public void SetMines(float mines)
     {
+        SoloGameSettings.minesLabel.GetComponent<TextMeshProUGUI>().text = "MINES: " + mines;
+        MultiGameSettings.minesLabel.GetComponent<TextMeshProUGUI>().text = "MINES: " + mines;
         PlayerPrefs.SetFloat("Mines", mines);
         PlayerPrefs.Save();
     }
