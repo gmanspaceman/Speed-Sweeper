@@ -13,6 +13,8 @@ public class GameUI : MonoBehaviour
     public GameObject YourTurn;
     public GameObject TheirTurn;
 
+    public Text TurnBanner;
+
     public Slider volSlider;
 
     public GameObject gameLose;
@@ -32,6 +34,13 @@ public class GameUI : MonoBehaviour
     {
          YourTurn.SetActive(myTurn);
          TheirTurn.SetActive(!myTurn);
+    }
+    public void SetTurnBanner(string s = "")
+    {
+        if(s == "")
+            TurnBanner.text = "";
+        else
+            TurnBanner.text = "Turn: " + s;
     }
     public void toggleMenu()
     {

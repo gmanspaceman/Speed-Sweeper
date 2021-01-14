@@ -12,8 +12,8 @@ public class Networking : MonoBehaviour
     public static event Action<float> OnPingPong;
     public static event Action<int> OnHello;
     public static event Action<string> OnGameUpdate;
-    public static event Action<int, int> OnRestart;
-    public static event Action<int, int, int, string[]> OnJoinedGame;
+    public static event Action<int, int, string> OnRestart;
+    public static event Action<int, int, string, int, string[]> OnJoinedGame;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
 
@@ -158,9 +158,10 @@ public class Networking : MonoBehaviour
             case "JOINED_GAME":
                 int gameState = int.Parse(parseMsg[1]);
                 int currentTurnId = int.Parse(parseMsg[2]);
-                gameId = int.Parse(parseMsg[3]);
+                string currentTurnName = parseMsg[3];
+                gameId = int.Parse(parseMsg[4]);
 
-                OnJoinedGame?.Invoke(gameState, currentTurnId, gameId, parseMsg);
+                OnJoinedGame?.Invoke(gameState, currentTurnId, currentTurnName, gameId, parseMsg);
                 break;
             case "GAME_LIST":
                 Dictionary<int, int> gameList = new Dictionary<int, int>();
@@ -201,7 +202,9 @@ public class Networking : MonoBehaviour
             case "RESTART":
                 gameId = int.Parse(parseMsg[1]);
                 int clientId = int.Parse(parseMsg[2]);
-                OnRestart?.Invoke(gameId, clientId);
+                currentTurnName = parseMsg[3];
+
+                OnRestart?.Invoke(gameId, clientId, currentTurnName);
                 break;
             //case "WAIT_TURN":
                 

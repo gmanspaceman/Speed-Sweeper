@@ -203,6 +203,7 @@ public class BoardGenerator : MonoBehaviour
         myTurnCount = 2;
         g.myTurn = true;
         gameUI.WhosTurn(g.myTurn);
+        gameUI.SetTurnBanner(PlayerPrefs.GetString("Username"));
     }
     public void ServerSend_JoinGame(int gameId)
     {
@@ -218,14 +219,15 @@ public class BoardGenerator : MonoBehaviour
         myTurnCount = 0;
         g.myTurn = false;
         gameUI.WhosTurn(g.myTurn);
+        gameUI.SetTurnBanner();
     }
-    public void JoinedGame(int _gameState, int _CurrentTurnId, int _gameId, string[] _raw)
+    public void JoinedGame(int _gameState, int _CurrentTurnId, string _CurrentTurnName, int _gameId, string[] _raw)
     {
         g.gameId = _gameId;
         //g.gameId = gameId;
         if (_gameState == 1)
         {
-            string[] gameUpdate = _raw.Skip(4).ToArray();
+            string[] gameUpdate = _raw.Skip(5).ToArray();
             string currentGameState = String.Join(",", gameUpdate);
             //currentGameState = "GAME_UPDATE," + currentGameState;
             //this should not be just the GAME_UPDATE message
@@ -234,7 +236,7 @@ public class BoardGenerator : MonoBehaviour
         }
         else
         {
-            Restart(_gameId, _CurrentTurnId); //i guess restart, maybe i want to actualyl show a finished game
+            Restart(_gameId, _CurrentTurnId, _CurrentTurnName); //i guess restart, maybe i want to actualyl show a finished game
                                                 //or not do anything on a new game(prob nbot)
         }
         //clientId = _clientId; //THIS WSANT CHANGE ON SERVER TO BE GAMESTATE
@@ -243,30 +245,32 @@ public class BoardGenerator : MonoBehaviour
     public void GameUpdate(string gameUpdate)
     {
         string[] update = gameUpdate.Split(',');
-        string currentPlayerTurn = update[1];
-        
+        string currentPlayerTurnId = update[1];
+        string currentPlayerTurnName = update[2];
+
         //print(gameUpdate);
-        
-        string moveUpdate = String.Join(",", update.Skip(2));
+
+        string moveUpdate = String.Join(",", update.Skip(3));
 
         //print(moveUpdate);
 
         g.UnPackMidGameBoardStateForServer(moveUpdate);
 
 
-        if (int.Parse(currentPlayerTurn) == clientId)
+        if (int.Parse(currentPlayerTurnId) == clientId)
             g.myTurn = true;
         else
             g.myTurn = false;
 
         gameUI.WhosTurn(g.myTurn);
+        gameUI.SetTurnBanner(currentPlayerTurnName);
     }
     public void ServerSend_Move()
     {
         g.myTurn = false;
         gameUI.WhosTurn(g.myTurn);
         Networking.SendToServer(g.PackMidGameBoardStateForServer("MOVE"));
-        
+        gameUI.SetTurnBanner();
     }
     public void ServerSend_GetGameList(bool isConnected)
     {
@@ -303,10 +307,11 @@ public class BoardGenerator : MonoBehaviour
 
             g.myTurn = true;
             gameUI.WhosTurn(g.myTurn);
+            gameUI.SetTurnBanner();
             //g.gameId = -1; //okay so comenting this out then doesnt lock out game in udpate
         }
     }
-    public void Restart(int gameid, int clientTurnId)
+    public void Restart(int gameid, int clientTurnId, string _CurrentTurnName)
     {
        //gameUI.ShowHideGameEnd(GameState.GamePhase.PreGame);
         initalizeGameState(gameid);
@@ -326,7 +331,7 @@ public class BoardGenerator : MonoBehaviour
             g.myTurn = true;
         }
         gameUI.WhosTurn(g.myTurn);
-
+        gameUI.SetTurnBanner(_CurrentTurnName);
         //if (!animationActive)
         //    StartCoroutine(AnimateRippleRight(g));
 
@@ -392,7 +397,8 @@ public class BoardGenerator : MonoBehaviour
             {
                 g.gamePhase = GameState.GamePhase.PreGame;
                 g.myTurn = true; //i think this is alreayd true
-                gameUI.WhosTurn(true);
+                gameUI.WhosTurn(g.myTurn);
+                gameUI.SetTurnBanner();
             }
 
             //else do server stuff
@@ -455,7 +461,7 @@ public class BoardGenerator : MonoBehaviour
                     if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
                         ServerSend_RestartGame();
                     else
-                        Restart((int)g.gameId, clientId);
+                        Restart((int)g.gameId, clientId, "Yours!");
                     
                     return;
                 }
@@ -467,7 +473,7 @@ public class BoardGenerator : MonoBehaviour
 
                 if (!doubleClick && mouse1DownTime.ElapsedMilliseconds == 0 && !Input.GetMouseButton(1) && !Input.GetMouseButtonUp(1))
                 {
-                    print("here2");
+                    //print("here2");
                 }
                 else if (Input.GetMouseButtonUp(0) && Input.GetMouseButton(1))
                 {
@@ -479,7 +485,7 @@ public class BoardGenerator : MonoBehaviour
                 }
                 else if ((doubleClick || Mathf.Abs(mouse2Time - mouse1Time) < 0.25f) && mouse1DownTime.ElapsedMilliseconds < 500)
                 {
-                    print("here5");
+                    //print("here5");
                     bool leftandrigthwilldosomething = false;
 
 

@@ -53,7 +53,7 @@ public class ServerConnectionUIManager : MonoBehaviour
         connectServer.interactable = !_isConnected;
         isConnected.text = _isConnected ? "Connected! :)" : "Disconnected! :(";
     }
-    public void JoinedGameView(int gameState, int clientId, int gameId, string[] raw)
+    public void JoinedGameView(int gameState, int clientTurnId, string clientTurnName, int gameId, string[] raw)
     {
         leaveGame.interactable = true;
         makeGame.interactable = false;
