@@ -73,6 +73,8 @@ public class Networking : MonoBehaviour
     }
     public void Connect()
     {
+        PlayerPrefs.DeleteKey("ClientId");
+
 #if UNITY_WEBGL
         StartCoroutine("OpenWebSocketServerConnection");
 #else
@@ -153,6 +155,8 @@ public class Networking : MonoBehaviour
                 break;
             case "HELLO":
                 int id = int.Parse(parseMsg[1]);
+                PlayerPrefs.SetInt("ClientId", id);
+                PlayerPrefs.Save();
                 OnHello?.Invoke(id);
                 break;
             case "JOINED_GAME":
@@ -284,7 +288,7 @@ public class Networking : MonoBehaviour
     }
     IEnumerator EnqueueTCPFromServerThread()
     {
-        Byte[] buffer = new Byte[4 * 1024];
+        Byte[] buffer = new Byte[5 * 1024];
         int inputBuffer;
         while (true)
         {

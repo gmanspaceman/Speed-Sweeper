@@ -79,6 +79,7 @@ public class BoardGenerator : MonoBehaviour
         mouse1TimeSinceLast = new Stopwatch();
         mouse1TimeSinceLast.Start();
 
+        PlayerPrefs.DeleteKey("ClientId");
         clientId = -1;
         myTurnCount = 0;
 
@@ -224,6 +225,7 @@ public class BoardGenerator : MonoBehaviour
     public void JoinedGame(int _gameState, int _CurrentTurnId, string _CurrentTurnName, int _gameId, string[] _raw)
     {
         g.gameId = _gameId;
+        print(_gameId);
         //g.gameId = gameId;
         if (_gameState == 1)
         {
@@ -257,7 +259,7 @@ public class BoardGenerator : MonoBehaviour
         g.UnPackMidGameBoardStateForServer(moveUpdate);
 
 
-        if (int.Parse(currentPlayerTurnId) == clientId)
+        if (int.Parse(currentPlayerTurnId) == PlayerPrefs.GetInt("ClientId"))
             g.myTurn = true;
         else
             g.myTurn = false;
@@ -321,7 +323,7 @@ public class BoardGenerator : MonoBehaviour
             //i think i can do pregame here
             g.gamePhase = GameState.GamePhase.PreGame;
 
-            if (clientTurnId == clientId)
+            if (clientTurnId == PlayerPrefs.GetInt("ClientId"))
                 g.myTurn = true;
             else
                 g.myTurn = false;
@@ -461,7 +463,7 @@ public class BoardGenerator : MonoBehaviour
                     if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
                         ServerSend_RestartGame();
                     else
-                        Restart((int)g.gameId, clientId, "Yours!");
+                        Restart((int)g.gameId, PlayerPrefs.GetInt("ClientId"), "Yours!");
                     
                     return;
                 }
