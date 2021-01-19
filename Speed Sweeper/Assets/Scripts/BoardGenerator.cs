@@ -52,24 +52,14 @@ public class BoardGenerator : MonoBehaviour
     private void Awake()
     {
         Networking.OnJoinedGame += JoinedGame;
-        //Networking.OnGridRecieve += GridRecieve;
-        //Networking.OnTileClicked += TileClicked;
-        //Networking.OnTileRightClicked += TileRightClicked;
-        //Networking.OnTileLeftAndRightClicked += TileLeftAndRightClicked;
-        Networking.OnGameList += GameList;
-       // Networking.OnWaitTurn += WaitTurn;
+        //Networking.OnGameList += GameList;
         Networking.OnGameUpdate += GameUpdate;
         Networking.OnHello += Hello;
-        //Networking.OnYourTurn += YourTurn;
         Networking.OnRestart += Restart;
-        //Networking.OnGetMidGame += ServerSend_GetMidGame;
-        //Networking.OnMidGame += MidGame;
-        //Networking.OnTCPServerConnected += ServerSend_GetGameList;
-        //Networking.OnWebSocketServerConnected += ServerSend_GetGameList;
         Networking.OnServerConnected += ServerSend_GetGameList;
         Networking.OnServerConnected += ServerSend_WHOAMI;
         Networking.OnGameInfo += UpdateGameInfo;
-
+        
         OnEndGame += ServerSend_EndGame;
     }
     void Start()
@@ -227,20 +217,20 @@ public class BoardGenerator : MonoBehaviour
         g.gameId = _gameId;
         print(_gameId);
         //g.gameId = gameId;
-        if (_gameState == 1)
-        {
+        //if (_gameState == 1)
+        //{
             string[] gameUpdate = _raw.Skip(5).ToArray();
             string currentGameState = String.Join(",", gameUpdate);
             //currentGameState = "GAME_UPDATE," + currentGameState;
             //this should not be just the GAME_UPDATE message
             g.UnPackMidGameBoardStateForServer(currentGameState); 
             
-        }
-        else
-        {
+        //}
+        //else
+        //{
             Restart(_gameId, _CurrentTurnId, _CurrentTurnName); //i guess restart, maybe i want to actualyl show a finished game
                                                 //or not do anything on a new game(prob nbot)
-        }
+        //}
         //clientId = _clientId; //THIS WSANT CHANGE ON SERVER TO BE GAMESTATE
         //gameUI.gameInfoManager.gameObject.SetActive(true);
     }
@@ -258,6 +248,8 @@ public class BoardGenerator : MonoBehaviour
 
         g.UnPackMidGameBoardStateForServer(moveUpdate);
 
+        print(int.Parse(currentPlayerTurnId));
+        print(PlayerPrefs.GetInt("ClientId"));
 
         if (int.Parse(currentPlayerTurnId) == PlayerPrefs.GetInt("ClientId"))
             g.myTurn = true;
@@ -824,8 +816,8 @@ public class BoardGenerator : MonoBehaviour
         float width = ((float)Camera.main.orthographicSize * 2f * (float)Camera.main.aspect);
         float height = (float)Camera.main.orthographicSize * 2f;
 
-        print("Board width: " + width);
-        print("Tile Width needs to be: " + (float)width / (float)(_g.col + 0));
+        //print("Board width: " + width);
+        //print("Tile Width needs to be: " + (float)width / (float)(_g.col + 0));
         float tileScaleW = (float) (width / (float)(_g.col + 2));
         float tileScaleH = (float) (height / (float)(_g.row + 3));
 

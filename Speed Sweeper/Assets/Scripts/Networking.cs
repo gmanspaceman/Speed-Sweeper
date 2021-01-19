@@ -51,10 +51,12 @@ public class Networking : MonoBehaviour
 
     #endregion
 
+  
     //ServerConnectionUIManager.OnConnectClicked += Reconnect;
     private void Awake()
     {
-        DontDestroyOnLoad(gameObject);
+        
+        //DontDestroyOnLoad(gameObject);
     }
     public void MultiStart()
     {
@@ -80,7 +82,7 @@ public class Networking : MonoBehaviour
 #else
         StartCoroutine("OpenTCPServerConnection");
 #endif
-
+        
         pingPong = new Stopwatch();
         StartCoroutine("PingServer");
         StartCoroutine("DispatchQueueFromServer");
@@ -311,7 +313,7 @@ public class Networking : MonoBehaviour
 
         serverDataWS += message;
 
-        bool debugMsgQueueingAndCarry = false;
+        bool debugMsgQueueingAndCarry = true;
         //Carry over
         if (serverDataWS.Contains(eom)) //Find the <EOM> tag
         {

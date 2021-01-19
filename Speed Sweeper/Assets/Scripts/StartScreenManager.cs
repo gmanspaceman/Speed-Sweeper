@@ -80,7 +80,7 @@ public class StartScreenManager : MonoBehaviour
         fog.gameObject.SetActive(true);
 
         DontDestroyOnLoad(backgroundMusic.transform.parent.gameObject);
-        
+        DontDestroyOnLoad(n.transform.parent.gameObject);
         
     }
     private void Update()
@@ -113,6 +113,10 @@ public class StartScreenManager : MonoBehaviour
         StartCoroutine(FadeIn(backgroundMusic, PlayerPrefs.GetFloat("Volume", 1)));
         StartCoroutine(FadeOut(sceneMask));
         StartCoroutine(AnimateTitleText("Speed \n\tSweeper"));
+    }
+    private void OnDestroy()
+    {
+       //Networking.OnGameList -= GameList;
     }
 
     //Main Menu Navigation
