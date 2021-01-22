@@ -14,7 +14,7 @@ public class AudioManager : MonoBehaviour
     void Awake()
     {
         instance = this;
-        //DontDestroyOnLoad(gameObject);
+        DontDestroyOnLoad(gameObject);
         //sfxSource = new AudioSource();
         //sfxSource.transform.parent = Camera.main.transform;
         vol = 1.0f;

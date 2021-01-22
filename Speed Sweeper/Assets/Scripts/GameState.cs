@@ -2,7 +2,7 @@
 using UnityEngine;
 
 [Serializable]
-public class GameState : MonoBehaviour
+public class GameState
 {
     public enum GamePhase { PreGame, Playing, Paused, Lose, Win, NetworkConfig };
     public enum GameType { Solo, Multiplayer };
@@ -32,18 +32,18 @@ public class GameState : MonoBehaviour
 
     public void DebugPrint()
     {
-        print("Round: " + round.ToString() + "\n" +
-            " Game Phase:" + gamePhase.ToString() + "\n" +
-            " Total Tiles:" + totalTiles.ToString() + "\n" +
-            " Total Bombs:" + totalBombs.ToString() + "\n" +
-            " Total Visible:" + totalVisible.ToString() + "\n" +
-            " Total Clicked:" + totalClicked.ToString() + "\n" +
-            " Tiles Explored:" + tilesExplored.ToString() + "\n" +
-            " Total Opened:" + totalOpened.ToString() + "\n" +
-            " Total Flagged:" + totalFlagged.ToString() + "\n" +
-            " Total Questioned:" + totalQuestioned.ToString() + "\n" +
-            " Bombs Remaining:" + bombsRemaining.ToString() + "\n" +
-            " Bombs Clicked:" + bombsclicked.ToString()); ;
+        //print("Round: " + round.ToString() + "\n" +
+        //    " Game Phase:" + gamePhase.ToString() + "\n" +
+        //    " Total Tiles:" + totalTiles.ToString() + "\n" +
+        //    " Total Bombs:" + totalBombs.ToString() + "\n" +
+        //    " Total Visible:" + totalVisible.ToString() + "\n" +
+        //    " Total Clicked:" + totalClicked.ToString() + "\n" +
+        //    " Tiles Explored:" + tilesExplored.ToString() + "\n" +
+        //    " Total Opened:" + totalOpened.ToString() + "\n" +
+        //    " Total Flagged:" + totalFlagged.ToString() + "\n" +
+        //    " Total Questioned:" + totalQuestioned.ToString() + "\n" +
+        //    " Bombs Remaining:" + bombsRemaining.ToString() + "\n" +
+        //    " Bombs Clicked:" + bombsclicked.ToString());
     }
     public GameState(int _col, int _row, int _numMines)
     {
@@ -216,7 +216,7 @@ public class GameState : MonoBehaviour
 
         if (bombsclicked > 0)
             gamePhase = GamePhase.Lose;
-        else if (bombsRemaining == 0 && (totalClicked + totalBombs) == totalTiles)
+        else if (bombsRemaining == 0 && (totalOpened + totalBombs) == totalTiles)
             gamePhase = GamePhase.Win;
         else if (totalClicked == 0)
             gamePhase = GamePhase.PreGame;

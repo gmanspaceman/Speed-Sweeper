@@ -12,8 +12,9 @@ public class Networking : MonoBehaviour
     public static event Action<float> OnPingPong;
     public static event Action<int> OnHello;
     public static event Action<string> OnGameUpdate;
+    public static event Action<string> OnTurnList;
     public static event Action<int, int, string> OnRestart;
-    public static event Action<int, int, string, int, string[]> OnJoinedGame;
+    public static event Action<int, int, string, int, int, int, int, string[]> OnJoinedGame;
     public static event Action<string> OnGameInfo;
     public static event Action<Dictionary<int, int>> OnGameList;
 
@@ -27,6 +28,8 @@ public class Networking : MonoBehaviour
     public Stopwatch pingPong;
     public float pingTime { get; set; }
     public bool isConnected = false;
+
+    public static Queue<string> sendList = new Queue<string>();
 
     #region WebSocketJSLib Implement
     [DllImport("__Internal")]
@@ -44,7 +47,7 @@ public class Networking : MonoBehaviour
     [DllImport("__Internal")]
     private static extern void Close(); //close websocket connection
     
-    Queue<string> recvList = new Queue<string>(); //keep receive messages
+    Queue<string>  recvList = new Queue<string>(); //keep receive messages
 
     string serverDataWS = string.Empty;
     string carryDataWS = string.Empty;
@@ -55,8 +58,13 @@ public class Networking : MonoBehaviour
     //ServerConnectionUIManager.OnConnectClicked += Reconnect;
     private void Awake()
     {
-        
+        pingPong = new Stopwatch();
         //DontDestroyOnLoad(gameObject);
+    }
+    private void OnDestroy()
+    {
+        if(isConnected)
+            Disconnect();
     }
     public void MultiStart()
     {
@@ -82,10 +90,9 @@ public class Networking : MonoBehaviour
 #else
         StartCoroutine("OpenTCPServerConnection");
 #endif
-        
-        pingPong = new Stopwatch();
         StartCoroutine("PingServer");
         StartCoroutine("DispatchQueueFromServer");
+        StartCoroutine("DispatchToServer");
     }
     public void Disconnect()
     {
@@ -155,6 +162,10 @@ public class Networking : MonoBehaviour
 
                 OnGameUpdate?.Invoke(msg);
                 break;
+            case "TURN_LIST":
+
+                OnTurnList?.Invoke(msg);
+                break;
             case "HELLO":
                 int id = int.Parse(parseMsg[1]);
                 PlayerPrefs.SetInt("ClientId", id);
@@ -166,8 +177,12 @@ public class Networking : MonoBehaviour
                 int currentTurnId = int.Parse(parseMsg[2]);
                 string currentTurnName = parseMsg[3];
                 gameId = int.Parse(parseMsg[4]);
+                int col = int.Parse(parseMsg[5]);
+                int row = int.Parse(parseMsg[6]);
+                int mines = int.Parse(parseMsg[7]);
+                
 
-                OnJoinedGame?.Invoke(gameState, currentTurnId, currentTurnName, gameId, parseMsg);
+                OnJoinedGame?.Invoke(gameState, currentTurnId, currentTurnName, gameId,col, row, mines, parseMsg);
                 break;
             case "GAME_LIST":
                 Dictionary<int, int> gameList = new Dictionary<int, int>();
@@ -266,10 +281,21 @@ public class Networking : MonoBehaviour
             }
         }
     }
-    public static void SendToServer(string msg)
+    IEnumerator DispatchToServer()
+    {
+        while (true)
+        {
+            if (sendList.Count != 0)
+            {         //When our message queue has string coming.
+                DispatchToServerSend(sendList.Dequeue());
+            }
+            yield return null;
+        }
+    }
+    public static void DispatchToServerSend(string msg)
     {
         msg += eom; //append EOM marker
-        if(!msg.Contains("PING"))
+        if (!msg.Contains("PING"))
             print("Sent: " + msg);
 
         try
@@ -287,6 +313,29 @@ public class Networking : MonoBehaviour
         {
             Console.WriteLine("Server must have closed the connection!!!!");
         }
+    }
+    public static void SendToServer(string msg)
+    {
+        sendList.Enqueue(msg);
+//        msg += eom; //append EOM marker
+//        if(!msg.Contains("PING"))
+//            print("Sent: " + msg);
+
+        //        try
+        //        {
+
+        //#if UNITY_WEBGL
+        //            if (State() == 1)
+        //                Send(msg); //use jslib send
+        //#else
+        //            byte[] data = System.Text.Encoding.UTF8.GetBytes(msg);  // Translate the Message into ASCII.
+        //            _stream.Write(data, 0, data.Length);    // Send the message to the connected TcpServer. 
+        //#endif
+        //        }
+        //        catch
+        //        {
+        //            Console.WriteLine("Server must have closed the connection!!!!");
+        //        }
     }
     IEnumerator EnqueueTCPFromServerThread()
     {
@@ -313,7 +362,7 @@ public class Networking : MonoBehaviour
 
         serverDataWS += message;
 
-        bool debugMsgQueueingAndCarry = true;
+        bool debugMsgQueueingAndCarry = false;
         //Carry over
         if (serverDataWS.Contains(eom)) //Find the <EOM> tag
         {
@@ -385,6 +434,18 @@ public class Networking : MonoBehaviour
         //need to get copy of grid from host to populate
         if (isConnected)
             SendToServer(msgKey);
+    }
+    public static void ServerSend_TurnList()
+    {
+        string msgKey = "TURN_LIST";
+
+        SendToServer(msgKey);
+    }
+    public static void ServerSend_Pass()
+    {
+        string msgKey = "PASS";
+
+        SendToServer(msgKey);
     }
 }
 

@@ -72,7 +72,7 @@ public class StartScreenManager : MonoBehaviour
         //                            (int)PlayerPrefs.GetFloat("Rows", MultiGameSettings.rows.value),
         //                            (int)PlayerPrefs.GetFloat("Mines", MultiGameSettings.mines.value));
 
-        username.GetComponent<TextMeshProUGUI>().text = PlayerPrefs.GetString("Username", "");
+        username.GetComponent<TMP_InputField>().text = PlayerPrefs.GetString("Username", "");
 
         sceneMask.alpha = 1;
         backgroundMusic.volume = 0;
@@ -188,14 +188,14 @@ public class StartScreenManager : MonoBehaviour
     public void TransitionFrom_MultuplayerMenu_To_MultiplayerNewGameMenu()
     {
         
-        if (username.GetComponent<TextMeshProUGUI>().text.Length <= 1)
+        if (username.GetComponent<TMP_InputField>().text.Length <= 1)
         {
             enterUsername.SetActive(true);
             return;
         }
         
 
-        PlayerPrefs.SetString("Username", username.GetComponent<TextMeshProUGUI>().text);
+        PlayerPrefs.SetString("Username", username.GetComponent<TMP_InputField>().text);
         PlayerPrefs.Save();
 
         connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
@@ -208,13 +208,13 @@ public class StartScreenManager : MonoBehaviour
         PlayerPrefs.DeleteKey("JoinGame");
         PlayerPrefs.Save();
 
-        if (username.GetComponent<TextMeshProUGUI>().text.Length <= 1)
+        if (username.GetComponent<TMP_InputField>().text.Length <= 1)
         {
             enterUsername.SetActive(true);
             return;
         }
 
-        PlayerPrefs.SetString("Username", username.GetComponent<TextMeshProUGUI>().text);
+        PlayerPrefs.SetString("Username", username.GetComponent<TMP_InputField>().text);
         PlayerPrefs.Save();
 
         connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
@@ -398,7 +398,7 @@ public class StartScreenManager : MonoBehaviour
         while (g.alpha < 1)
         {
             float val = g.alpha;
-            val += 0.01f;
+            val += 0.05f;
             g.alpha = val;
             yield return null;
         }
@@ -412,7 +412,7 @@ public class StartScreenManager : MonoBehaviour
         {
             textToPrintSoFar += name[ii].ToString().ToUpper();
             titleText.text = textToPrintSoFar;
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.05f);
         }
         StartCoroutine(FadeIn(MainMenu));
     }
@@ -422,7 +422,7 @@ public class StartScreenManager : MonoBehaviour
         while (g.alpha < 1)
         {
             float val = g.alpha;
-            val += 0.01f;
+            val += 0.05f;
             g.alpha = val;
             yield return null;
         }
@@ -432,7 +432,7 @@ public class StartScreenManager : MonoBehaviour
         while (g.alpha > 0)
         {
             float val = g.alpha;
-            val -= 0.01f;
+            val -= 0.05f;
             g.alpha = val;
             yield return null;
         }
@@ -443,7 +443,7 @@ public class StartScreenManager : MonoBehaviour
         while (a.volume < vol)
         {
             float val = a.volume;
-            val += 0.01f;
+            val += 0.05f;
             a.volume = val;
             yield return null;
         }
@@ -453,7 +453,7 @@ public class StartScreenManager : MonoBehaviour
         while (outg.alpha > 0)
         {
             float val = outg.alpha;
-            val -= 0.01f;
+            val -= 0.05f;
             outg.alpha = val;
             yield return null;
         }
@@ -462,7 +462,7 @@ public class StartScreenManager : MonoBehaviour
         while (ing.alpha < 1)
         {
             float val = ing.alpha;
-            val += 0.01f;
+            val += 0.05f;
             ing.alpha = val;
             yield return null;
         }

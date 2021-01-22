@@ -69,7 +69,7 @@ public class BoardGenerator : MonoBehaviour
         mouse1TimeSinceLast = new Stopwatch();
         mouse1TimeSinceLast.Start();
 
-        PlayerPrefs.DeleteKey("ClientId");
+        //PlayerPrefs.DeleteKey("ClientId");
         clientId = -1;
         myTurnCount = 0;
 
@@ -212,24 +212,50 @@ public class BoardGenerator : MonoBehaviour
         gameUI.WhosTurn(g.myTurn);
         gameUI.SetTurnBanner();
     }
-    public void JoinedGame(int _gameState, int _CurrentTurnId, string _CurrentTurnName, int _gameId, string[] _raw)
+    public void JoinedGame(int _gameState, int _CurrentTurnId, string _CurrentTurnName, int _gameId, int _col, int _row,int _mines,  string[] _raw)
     {
         g.gameId = _gameId;
         print(_gameId);
         //g.gameId = gameId;
         //if (_gameState == 1)
         //{
-            string[] gameUpdate = _raw.Skip(5).ToArray();
+            string[] gameUpdate = _raw.Skip(8).ToArray();
             string currentGameState = String.Join(",", gameUpdate);
-            //currentGameState = "GAME_UPDATE," + currentGameState;
-            //this should not be just the GAME_UPDATE message
-            g.UnPackMidGameBoardStateForServer(currentGameState); 
-            
+        //currentGameState = "GAME_UPDATE," + currentGameState;
+        //this should not be just the GAME_UPDATE message
+
+        PlayerPrefs.SetFloat("Rows", _row);
+        PlayerPrefs.SetFloat("Cols", _col);
+        PlayerPrefs.SetFloat("Mines", _mines);
+        PlayerPrefs.Save();
+
+        initalizeGameState(_gameId); //prbabyl shoudl do something to not reinit a person board
+
+        g.UnPackMidGameBoardStateForServer(currentGameState);
+
+
+        if (g.gameType == GameState.GameType.Multiplayer && _gameId != -1)
+        {
+            //i think i can do pregame here
+            g.gamePhase = GameState.GamePhase.PreGame;
+
+            if (_CurrentTurnId == PlayerPrefs.GetInt("ClientId"))
+                g.myTurn = true;
+            else
+                g.myTurn = false;
+        }
+        else
+        {
+            g.myTurn = true;
+        }
+        gameUI.WhosTurn(g.myTurn);
+        gameUI.SetTurnBanner(_CurrentTurnName);
+
         //}
         //else
         //{
-            Restart(_gameId, _CurrentTurnId, _CurrentTurnName); //i guess restart, maybe i want to actualyl show a finished game
-                                                //or not do anything on a new game(prob nbot)
+        //Restart(_gameId, _CurrentTurnId, _CurrentTurnName); //i guess restart, maybe i want to actualyl show a finished game
+        //or not do anything on a new game(prob nbot)
         //}
         //clientId = _clientId; //THIS WSANT CHANGE ON SERVER TO BE GAMESTATE
         //gameUI.gameInfoManager.gameObject.SetActive(true);
@@ -291,6 +317,7 @@ public class BoardGenerator : MonoBehaviour
         PlayerPrefs.DeleteKey("LocalSave_Cols");
         PlayerPrefs.DeleteKey("LocalSave_Mines");
         PlayerPrefs.Save();
+        print("deleting");
 
         if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
         {
@@ -319,13 +346,17 @@ public class BoardGenerator : MonoBehaviour
                 g.myTurn = true;
             else
                 g.myTurn = false;
+
+            gameUI.WhosTurn(g.myTurn);
+            gameUI.SetTurnBanner(_CurrentTurnName);
         }
         else
         {
             g.myTurn = true;
+            gameUI.WhosTurn(g.myTurn);
+            gameUI.SetTurnBanner();
         }
-        gameUI.WhosTurn(g.myTurn);
-        gameUI.SetTurnBanner(_CurrentTurnName);
+        
         //if (!animationActive)
         //    StartCoroutine(AnimateRippleRight(g));
 
@@ -356,13 +387,26 @@ public class BoardGenerator : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Check if Back was pressed this frame
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            gameUI.AnimatedTurnList();
+        }
+
         if (animationActive || explosion != null) //dont allow clicking to move anythign right now
             return;
         
         UpdateUI();
 
 
-        
+
+        //assumption is everytihg below this line is just to click tiles and do gamplay logic
+        //if a menu is open just reutn here
+        if (gameUI.isMenuOpen())
+        {
+            return;
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             mouse1DownTime.Restart();
@@ -380,10 +424,7 @@ public class BoardGenerator : MonoBehaviour
             doubleClick = false;
         }
 
-
         AniateClickDownHover(doubleClick);
-        
-        
         
         if (g.gamePhase == GameState.GamePhase.NetworkConfig)
         {
@@ -422,7 +463,6 @@ public class BoardGenerator : MonoBehaviour
                 return;
 
             string msgKey;
-            
 
             if (g.gamePhase == GameState.GamePhase.PreGame)
             {
@@ -440,13 +480,20 @@ public class BoardGenerator : MonoBehaviour
                     if (g.gameType == GameState.GameType.Multiplayer && g.gameId != -1)
                         ServerSend_Move();
 
+                    PlayerPrefs.SetString("LocalSave", g.PackMidGameBoardStateForServer("MOVE"));
+                    PlayerPrefs.SetFloat("LocalSave_Rows", g.row);
+                    PlayerPrefs.SetFloat("LocalSave_Cols", g.col);
+                    PlayerPrefs.SetFloat("LocalSave_Mines", g.numMines);
+                    PlayerPrefs.Save();
+                    print("saving"); 
+
                 }
             }
             else if (g.gamePhase == GameState.GamePhase.Win || 
                      g.gamePhase == GameState.GamePhase.Lose)
             {
                 //if game is over clear the local save
-                
+                //gameUI.SetTurnBanner();
 
                 if (Input.GetMouseButtonUp(0))
                 {
@@ -555,6 +602,7 @@ public class BoardGenerator : MonoBehaviour
                     PlayerPrefs.SetFloat("LocalSave_Cols", g.col);
                     PlayerPrefs.SetFloat("LocalSave_Mines", g.numMines);
                     PlayerPrefs.Save();
+                    print("saving");
                 }
             }
 

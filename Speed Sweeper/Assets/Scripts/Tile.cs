@@ -2,7 +2,7 @@
 using TMPro;
 using UnityEngine;
 
-public class Tile : MonoBehaviour
+public class Tile
 {
     public enum TileState { Unmarked, Flagged, Questioned, Opened };
 
