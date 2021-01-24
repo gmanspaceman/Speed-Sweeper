@@ -257,6 +257,7 @@ public class StartScreenManager : MonoBehaviour
     }
     public void TransitionFrom_MultiplayerNewGameMenu_To_MultiplayerMenu()
     {
+        n.Disconnect();
         connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);
 
         //username.GetComponent<TextMeshProUGUI>().text = PlayerPrefs.GetString("Username", "");
@@ -282,6 +283,7 @@ public class StartScreenManager : MonoBehaviour
     }
     public void TransitionFrom_MultiplayerJoinGameMenu_To_MultiplayerMenu()
     {
+        n.Disconnect();
         Networking.OnGameList -= GameList;
 
         connectStatus.GetComponent<TextMeshProUGUI>().color = new Color(connectStatus.GetComponent<TextMeshProUGUI>().color.r, connectStatus.GetComponent<TextMeshProUGUI>().color.g, connectStatus.GetComponent<TextMeshProUGUI>().color.b, 0f);

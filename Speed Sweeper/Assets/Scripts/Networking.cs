@@ -30,7 +30,7 @@ public class Networking : MonoBehaviour
     public bool isConnected = false;
 
     public static Queue<string> sendList = new Queue<string>();
-
+#if UNITY_WEBGL
     #region WebSocketJSLib Implement
     [DllImport("__Internal")]
     private static extern void Hello(); //test javascript plugin
@@ -47,14 +47,16 @@ public class Networking : MonoBehaviour
     [DllImport("__Internal")]
     private static extern void Close(); //close websocket connection
     
-    Queue<string>  recvList = new Queue<string>(); //keep receive messages
+    
+
+    #endregion
+#endif
+
+    Queue<string> recvList = new Queue<string>(); //keep receive messages
 
     string serverDataWS = string.Empty;
     string carryDataWS = string.Empty;
 
-    #endregion
-
-  
     //ServerConnectionUIManager.OnConnectClicked += Reconnect;
     private void Awake()
     {
@@ -90,9 +92,7 @@ public class Networking : MonoBehaviour
 #else
         StartCoroutine("OpenTCPServerConnection");
 #endif
-        StartCoroutine("PingServer");
-        StartCoroutine("DispatchQueueFromServer");
-        StartCoroutine("DispatchToServer");
+        
     }
     public void Disconnect()
     {
@@ -120,12 +120,16 @@ public class Networking : MonoBehaviour
             yield return new WaitForSeconds(1);
         }
         StartCoroutine("EnqueueTCPFromServerThread");
+        StartCoroutine("PingServer");
+        StartCoroutine("DispatchQueueFromServer");
+        StartCoroutine("DispatchToServer");
         //OnTCPServerConnected?.Invoke(true);
         OnServerConnected?.Invoke(true);
         isConnected = true;
     }
     IEnumerator OpenWebSocketServerConnection()
     {
+#if UNITY_WEBGL
         InitWebSocket(wsString);
         while (State() != 1)
         {
@@ -133,12 +137,20 @@ public class Networking : MonoBehaviour
             yield return new WaitForSeconds(1); //wait till it connects before throwing the event
         }
         //OnWebSocketServerConnected?.Invoke(true);
+        StartCoroutine("PingServer");
+        StartCoroutine("DispatchQueueFromServer");
+        StartCoroutine("DispatchToServer");
+
         OnServerConnected?.Invoke(true);
         isConnected = true;
         //enqueing happens in jslib
+#else
+        yield return null;
+#endif
     }
     IEnumerator DispatchQueueFromServer()
     {
+#if UNITY_WEBGL
         while (true)
         {
             if (recvList.Count != 0)
@@ -147,6 +159,9 @@ public class Networking : MonoBehaviour
             }
             yield return null;
         }
+#else
+        yield return null;
+#endif
     }
     void Dispatch(string msg)
     {
@@ -261,10 +276,13 @@ public class Networking : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(1);
-            pingPong.Restart();
-            Networking.SendToServer("PING");
-            
+            yield return new WaitForSeconds(2);
+            if (!pingPong.IsRunning)
+            {
+                pingPong.Restart();
+                Networking.SendToServer("PING");
+            }
+
             if (pingPong.ElapsedMilliseconds < 5000 && !isConnected)
             {
                 isConnected = true;
@@ -287,9 +305,36 @@ public class Networking : MonoBehaviour
         {
             if (sendList.Count != 0)
             {         //When our message queue has string coming.
-                DispatchToServerSend(sendList.Dequeue());
+                string tmp = sendList.Dequeue();
+                print("Sending: " + tmp + " | Left on Send Queue: " + sendList.Count);
+                DispatchToServerSend(tmp);
+            }
+            else
+            {
+                //yield return new WaitForSeconds(1);
+                //if (!pingPong.IsRunning)
+                //{
+                //    pingPong.Restart();
+                //    //Networking.SendToServer("PING");
+                //}
+
+                //if (pingPong.ElapsedMilliseconds < 5000 && !isConnected)
+                //{
+                //    isConnected = true;
+                //    //OnTCPServerConnected?.Invoke(true);
+                //    //OnWebSocketServerConnected?.Invoke(true);
+                //    OnServerConnected?.Invoke(true);
+                //}
+                //if (pingPong.ElapsedMilliseconds > 5000 && isConnected)
+                //{
+                //    isConnected = false;
+                //    //OnTCPServerConnected?.Invoke(false);
+                //    //OnWebSocketServerConnected?.Invoke(false);
+                //    OnServerConnected?.Invoke(false);
+                //}
             }
             yield return null;
+            yield return new WaitForSeconds(0.1f);
         }
     }
     public static void DispatchToServerSend(string msg)
@@ -302,6 +347,9 @@ public class Networking : MonoBehaviour
         {
 
 #if UNITY_WEBGL
+            //while (State() != 1)
+            //    print("wait for connect debug");
+
             if (State() == 1)
                 Send(msg); //use jslib send
 #else
@@ -316,6 +364,7 @@ public class Networking : MonoBehaviour
     }
     public static void SendToServer(string msg)
     {
+        //print("Adding to Send Queue: " + msg);
         sendList.Enqueue(msg);
 //        msg += eom; //append EOM marker
 //        if(!msg.Contains("PING"))
@@ -353,7 +402,7 @@ public class Networking : MonoBehaviour
     }
     void RecvString(string message)
     {
-        #region Carry Data
+#region Carry Data
         //will need to just dump carry data if its getting to obigt
         //this implies more message traffice than the loop can keep up with
         //should only happen in a debug enviorment
@@ -403,7 +452,7 @@ public class Networking : MonoBehaviour
                 if (debugMsgQueueingAndCarry)
                     print("carryData: " + carryDataWS);
         }
-        #endregion
+#endregion
     }
 
     //For Receive Message, this function was call by plugin, we need to keep this name.

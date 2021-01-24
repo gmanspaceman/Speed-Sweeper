@@ -21,17 +21,13 @@ var WebSocketJsLib = {
 		}; 
 		window.wsclient.onmessage = function(evt) {
 			var received_msg = evt.data;
-			if (received_msg == "hello") {
-				window.wsclient.send("hello");
-			} else {
-				//console.log("[jslib recv] "+received_msg);
-				SendMessage('Server Stuff', 'RecvString', received_msg);	
-			}
+			SendMessage('NetworkManager', 'RecvString', received_msg);	
+			
 		}; 
 		window.wsclient.onerror = function(evt) {
 			var error_msg = evt.data;
 			console.log("[error] "+error_msg);
-			SendMessage('Server Stuff', 'ErrorString', "close");
+			SendMessage('NetworkManager', 'ErrorString', "close");
 		};
 	},
 	State: function(){
@@ -43,7 +39,7 @@ var WebSocketJsLib = {
 	Send: function(msg){
 		var message = Pointer_stringify(msg);
 		if (typeof window.wsclient !== "undefined") {
-			//console.log("[jslib send] "+message);
+			console.log("[jslib send] "+message);
 			window.wsclient.send(message);		
 		} else {
 			console.log("[send-failed] "+message);
