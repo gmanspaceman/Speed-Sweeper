@@ -39,7 +39,7 @@ var WebSocketJsLib = {
 	Send: function(msg){
 		var message = Pointer_stringify(msg);
 		if (typeof window.wsclient !== "undefined") {
-			console.log("[jslib send] "+message);
+			//console.log("[jslib send] "+message);
 			window.wsclient.send(message);		
 		} else {
 			console.log("[send-failed] "+message);

@@ -280,7 +280,7 @@ public class Networking : MonoBehaviour
             if (!pingPong.IsRunning)
             {
                 pingPong.Restart();
-                Networking.SendToServer("PING");
+                SendToServer("PING");
             }
 
             if (pingPong.ElapsedMilliseconds < 5000 && !isConnected)
@@ -305,41 +305,25 @@ public class Networking : MonoBehaviour
         {
             if (sendList.Count != 0)
             {         //When our message queue has string coming.
-                string tmp = sendList.Dequeue();
-                print("Sending: " + tmp + " | Left on Send Queue: " + sendList.Count);
+                string tmp = "";
+                    
+                while (sendList.Count != 0)
+                    tmp += sendList.Dequeue() + eom;
+
+                //print("Sending: " + tmp + " | Left on Send Queue: " + sendList.Count);
                 DispatchToServerSend(tmp);
             }
             else
             {
-                //yield return new WaitForSeconds(1);
-                //if (!pingPong.IsRunning)
-                //{
-                //    pingPong.Restart();
-                //    //Networking.SendToServer("PING");
-                //}
 
-                //if (pingPong.ElapsedMilliseconds < 5000 && !isConnected)
-                //{
-                //    isConnected = true;
-                //    //OnTCPServerConnected?.Invoke(true);
-                //    //OnWebSocketServerConnected?.Invoke(true);
-                //    OnServerConnected?.Invoke(true);
-                //}
-                //if (pingPong.ElapsedMilliseconds > 5000 && isConnected)
-                //{
-                //    isConnected = false;
-                //    //OnTCPServerConnected?.Invoke(false);
-                //    //OnWebSocketServerConnected?.Invoke(false);
-                //    OnServerConnected?.Invoke(false);
-                //}
             }
             yield return null;
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.25f);
         }
     }
     public static void DispatchToServerSend(string msg)
     {
-        msg += eom; //append EOM marker
+        //msg += eom; //append EOM marker
         if (!msg.Contains("PING"))
             print("Sent: " + msg);
 
